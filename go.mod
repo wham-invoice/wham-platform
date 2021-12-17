@@ -1,4 +1,4 @@
-module github.com/rstorr/wham-plaform
+module github.com/rstorr/wham-platform
 
 go 1.17
 

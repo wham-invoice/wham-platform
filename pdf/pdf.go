@@ -8,7 +8,7 @@ import (
 	"github.com/johnfercher/maroto/pkg/consts"
 	"github.com/johnfercher/maroto/pkg/pdf"
 	"github.com/johnfercher/maroto/pkg/props"
-	"github.com/rstorr/wham-plaform/db"
+	"github.com/rstorr/wham-platform/db"
 )
 
 type PDFConstructor struct {
