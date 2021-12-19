@@ -16,6 +16,7 @@ type App struct {
 func InitDB(ctx context.Context) (*App, error) {
 	var app = new(App)
 
+	// NOTE: This file path is fragile - use relative ?
 	opt := option.WithCredentialsFile("/Users/work/go/src/github.com/rstorr/wham-platform/secrets/firebase_service_account_key.json")
 	firebaseApp, err := firebase.NewApp(ctx, nil, opt)
 	if err != nil {
