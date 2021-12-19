@@ -8,14 +8,15 @@ import (
 	"github.com/johnfercher/maroto/pkg/consts"
 	"github.com/johnfercher/maroto/pkg/pdf"
 	"github.com/johnfercher/maroto/pkg/props"
-	"github.com/rstorr/wham-plaform/db"
+	"github.com/rstorr/wham-platform/db"
+	"github.com/rstorr/wham-platform/util"
 )
 
 type PDFConstructor struct {
-	invoice db.Invoice
+	Invoice *db.Invoice
 }
 
-func Construct() {
+func Construct(p PDFConstructor) {
 
 	blueColor := getBlueColor()
 
@@ -25,21 +26,14 @@ func Construct() {
 	m.RegisterHeader(func() {
 		m.Row(20, func() {
 			m.Col(3, func() {
-				m.Text("Reuben Storr", props.Text{
+				m.Text(p.Invoice.User.GetFullName(), props.Text{
 					Size:        12,
 					Align:       consts.Left,
 					Style:       consts.Bold,
 					Extrapolate: false,
 				})
-				m.Text("Tel: 027 645 8704", props.Text{
+				m.Text(fmt.Sprintf("Tel: %s", p.Invoice.User.Phone), props.Text{
 					Top:   12,
-					Style: consts.BoldItalic,
-					Size:  8,
-					Align: consts.Left,
-					Color: blueColor,
-				})
-				m.Text("www.rstorr.io", props.Text{
-					Top:   15,
 					Style: consts.BoldItalic,
 					Size:  8,
 					Align: consts.Left,
@@ -53,12 +47,12 @@ func Construct() {
 	})
 
 	m.Row(30, func() {
-		getBillTo(m)
+		getBillTo(m, p.Invoice.Client)
 		m.ColSpace(6)
-		getInvoiceDetails(m)
+		getInvoiceDetails(m, p.Invoice)
 	})
 
-	getTable(m)
+	getTable(m, p.Invoice)
 
 	m.Row(5, func() {
 		m.Col(9, func() {
@@ -69,11 +63,12 @@ func Construct() {
 			})
 		})
 		m.Col(3, func() {
-			m.Text("$9,600", props.Text{
-				Top:   5,
-				Size:  10,
-				Align: consts.Right,
-			})
+			m.Text(
+				fmt.Sprintf("$%.2f", p.Invoice.GetSubtotal()), props.Text{
+					Top:   5,
+					Size:  10,
+					Align: consts.Right,
+				})
 		})
 	})
 	m.Row(5, func() {
@@ -85,11 +80,13 @@ func Construct() {
 			})
 		})
 		m.Col(3, func() {
-			m.Text("$1,440", props.Text{
-				Top:   5,
-				Size:  10,
-				Align: consts.Right,
-			})
+			m.Text(
+				fmt.Sprintf("$%.2f", p.Invoice.GetGST()),
+				props.Text{
+					Top:   5,
+					Size:  10,
+					Align: consts.Right,
+				})
 		})
 	})
 	m.Row(5, func() {
@@ -102,22 +99,24 @@ func Construct() {
 			})
 		})
 		m.Col(3, func() {
-			m.Text("$11,040.00", props.Text{
-				Top:   5,
-				Size:  12,
-				Align: consts.Right,
-			})
+			m.Text(
+				fmt.Sprintf("$%.2f", p.Invoice.GetTotal()),
+				props.Text{
+					Top:   5,
+					Size:  12,
+					Align: consts.Right,
+				})
 		})
 	})
 
-	err := m.OutputFileAndClose("assets/billing.pdf")
+	err := m.OutputFileAndClose("test_dir/billing.pdf")
 	if err != nil {
 		fmt.Println("Could not save PDF:", err)
 		os.Exit(1)
 	}
 }
 
-func getBillTo(m pdf.Maroto) {
+func getBillTo(m pdf.Maroto, client *db.User) {
 	m.Col(3, func() {
 		m.Text("Bill to", props.Text{
 			Top:         3,
@@ -126,47 +125,57 @@ func getBillTo(m pdf.Maroto) {
 			Style:       consts.Bold,
 			Extrapolate: false,
 		})
-		m.Text("Paul Swettenham", props.Text{
-			Top:         6,
-			Size:        8,
-			Align:       consts.Left,
-			Style:       consts.Italic,
-			Extrapolate: false,
-		})
-		m.Text("Sunstone Talent", props.Text{
+		m.Text(
+			client.GetFullName(),
+			props.Text{
+				Top:         6,
+				Size:        8,
+				Align:       consts.Left,
+				Style:       consts.Italic,
+				Extrapolate: false,
+			})
+		m.Text(client.Company, props.Text{
 			Top:         9,
 			Size:        8,
 			Align:       consts.Left,
 			Extrapolate: false,
 		})
-		m.Text("35 Sir William Pickering Dr ", props.Text{
-			Top:         12,
-			Size:        8,
-			Align:       consts.Left,
-			Extrapolate: false,
-		})
-		m.Text("Burnside, Christchurch", props.Text{
-			Top:         15,
-			Size:        8,
-			Align:       consts.Left,
-			Extrapolate: false,
-		})
-		m.Text("8053", props.Text{
-			Top:         18,
-			Size:        8,
-			Align:       consts.Left,
-			Extrapolate: false,
-		})
-		m.Text("New Zealand", props.Text{
-			Top:         21,
-			Size:        8,
-			Align:       consts.Left,
-			Extrapolate: false,
-		})
+		m.Text(
+			fmt.Sprintf("%s", client.Address.FirstLine),
+			props.Text{
+				Top:         12,
+				Size:        8,
+				Align:       consts.Left,
+				Extrapolate: false,
+			})
+		m.Text(
+			fmt.Sprintf("%s", client.Address.SecondLine),
+			props.Text{
+				Top:         15,
+				Size:        8,
+				Align:       consts.Left,
+				Extrapolate: false,
+			})
+		m.Text(
+			fmt.Sprintf("%s", client.Address.Postcode),
+			props.Text{
+				Top:         18,
+				Size:        8,
+				Align:       consts.Left,
+				Extrapolate: false,
+			})
+		m.Text(
+			fmt.Sprintf("%s", client.Address.Country),
+			props.Text{
+				Top:         21,
+				Size:        8,
+				Align:       consts.Left,
+				Extrapolate: false,
+			})
 	})
 }
 
-func getInvoiceDetails(m pdf.Maroto) {
+func getInvoiceDetails(m pdf.Maroto, i *db.Invoice) {
 	m.Col(3, func() {
 		m.Text("Invoice number", props.Text{
 			Top:         3,
@@ -175,41 +184,47 @@ func getInvoiceDetails(m pdf.Maroto) {
 			Style:       consts.Bold,
 			Extrapolate: false,
 		})
-		m.Text("000000009", props.Text{
-			Top:         6,
-			Size:        8,
-			Align:       consts.Right,
-			Style:       consts.Italic,
-			Extrapolate: false,
-		})
+		m.Text(
+			fmt.Sprintf("%d", i.Number),
+			props.Text{
+				Top:         6,
+				Size:        8,
+				Align:       consts.Right,
+				Style:       consts.Italic,
+				Extrapolate: false,
+			})
 		m.Text("Issue Date", props.Text{
 			Top:         9,
 			Size:        8,
 			Align:       consts.Right,
 			Extrapolate: false,
 		})
-		m.Text("28/10/2021", props.Text{
-			Top:         12,
-			Size:        8,
-			Align:       consts.Right,
-			Extrapolate: false,
-		})
-		m.Text("Issue Date", props.Text{
+		m.Text(
+			util.ToFormattedDate(i.IssueDate),
+			props.Text{
+				Top:         12,
+				Size:        8,
+				Align:       consts.Right,
+				Extrapolate: false,
+			})
+		m.Text("Due Date", props.Text{
 			Top:         15,
 			Size:        8,
 			Align:       consts.Right,
 			Extrapolate: false,
 		})
-		m.Text("28/10/2021", props.Text{
-			Top:         18,
-			Size:        8,
-			Align:       consts.Right,
-			Extrapolate: false,
-		})
+		m.Text(
+			util.ToFormattedDate(i.DueDate),
+			props.Text{
+				Top:         18,
+				Size:        8,
+				Align:       consts.Right,
+				Extrapolate: false,
+			})
 	})
 }
 
-func getTable(m pdf.Maroto) {
+func getTable(m pdf.Maroto, i *db.Invoice) {
 
 	grayColor := getGrayColor()
 
@@ -219,7 +234,7 @@ func getTable(m pdf.Maroto) {
 	})
 	m.SetBackgroundColor(color.NewWhite())
 
-	m.TableList(getHeader(), getContents(), props.TableList{
+	m.TableList(getHeader(), getContents(i), props.TableList{
 		HeaderProp: props.TableListContent{
 			Size:      9,
 			GridSizes: []uint{7, 2, 3},
@@ -240,9 +255,9 @@ func getHeader() []string {
 	return []string{"Description", "Quantity", "Amount($) ex GST"}
 }
 
-func getContents() [][]string {
+func getContents(i *db.Invoice) [][]string {
 	return [][]string{
-		{"Billable hours 1/10/21 - 31/10/21", "120", "9600"},
+		{i.Description, fmt.Sprintf("%.2f", i.Hours), fmt.Sprintf("%.2f", i.Rate)},
 	}
 }
 
