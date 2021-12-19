@@ -8,55 +8,57 @@ import (
 	"github.com/juju/errors"
 )
 
-type Client struct {
+type User struct {
 	ID        string
 	FirstName string `firestore:"first_name"`
 	LastName  string `firestore:"last_name"`
+	Phone     string `firestore:"phone_number"`
 	Email     string `firestore:"email"`
+	Company   string `firestore:"company"`
 	Address   *Address
 }
 
 type Address struct {
-	FirstLine  string `firestore:"second_line"`
-	SecondLine string `firestore:"first_line"`
-	Suburb     string `firestore:"suburb"`
-	Postcode   string `firestore:"postcode"`
-	Country    string `firestore:"country"`
+	FirstLine  string `firestore:"address_first_line"`
+	SecondLine string `firestore:"address_second_line"`
+	Suburb     string `firestore:"address_suburb"`
+	Postcode   string `firestore:"address_postcode"`
+	Country    string `firestore:"address_country"`
 }
 
-type ClientRequest struct {
+type UserRequest struct {
 	ID string
 }
 
-const clientCollection = "clients"
+const usersCollection = "users"
 
-func (app *App) GetClient(ctx context.Context, req *ClientRequest) (*Client, error) {
-	var client = new(Client)
+func (app *App) GetUser(ctx context.Context, req *UserRequest) (*User, error) {
+	var user = new(User)
 
-	result, err := app.client.Collection(clientCollection).Doc(req.ID).Get(ctx)
+	result, err := app.client.Collection(usersCollection).Doc(req.ID).Get(ctx)
 	if err != nil {
-		return client, errors.Trace(err)
+		return user, errors.Trace(err)
 	}
 
-	client.ID = result.Ref.ID
-	fmt.Printf("Client Name1: %v \n", result.Data()["first_name"])
-	if err := result.DataTo(&client); err != nil {
-		return client, errors.Trace(err)
+	user.ID = result.Ref.ID
+	if err := result.DataTo(&user); err != nil {
+		return user, errors.Trace(err)
 	}
 
-	address, err := addressfromClientDoc(result)
+	address, err := addressfromUserDoc(result)
 	if err != nil {
-		return client, errors.Trace(err)
+		return user, errors.Trace(err)
 	}
-	client.Address = address
+	user.Address = address
 
-	fmt.Printf("Client Name: %v \n", result.Data()["first_name"])
-	fmt.Printf("Client: %v\n", client)
-	fmt.Printf("Client obj name: %v\n", client.FirstName)
-	return client, nil
+	return user, nil
 }
 
-func addressfromClientDoc(doc *firestore.DocumentSnapshot) (*Address, error) {
+func (u User) GetFullName() string {
+	return fmt.Sprintf("%s %s", u.FirstName, u.LastName)
+}
+
+func addressfromUserDoc(doc *firestore.DocumentSnapshot) (*Address, error) {
 	var address = new(Address)
 	if err := doc.DataTo(&address); err != nil {
 		return address, errors.Trace(err)
