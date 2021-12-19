@@ -12,10 +12,10 @@ import (
 )
 
 type PDFConstructor struct {
-	invoice db.Invoice
+	Invoice *db.Invoice
 }
 
-func Construct() {
+func Construct(p PDFConstructor) {
 
 	blueColor := getBlueColor()
 
@@ -110,7 +110,7 @@ func Construct() {
 		})
 	})
 
-	err := m.OutputFileAndClose("assets/billing.pdf")
+	err := m.OutputFileAndClose("test_dir/billing.pdf")
 	if err != nil {
 		fmt.Println("Could not save PDF:", err)
 		os.Exit(1)
