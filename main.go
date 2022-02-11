@@ -4,15 +4,31 @@ import (
 	"context"
 	"log"
 
+	"github.com/gin-gonic/gin"
 	"github.com/juju/errors"
 	"github.com/rstorr/wham-platform/db"
+	"github.com/rstorr/wham-platform/email"
 	"github.com/rstorr/wham-platform/pdf"
 )
 
 func main() {
 
-	ctx := context.Background()
+	r := gin.Default()
+	r.GET("/", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"message": "Hello World",
+		})
+	})
 
+	r.Run()
+}
+
+func testEmail() {
+	email.Send()
+}
+
+func testPdf() {
+	ctx := context.Background()
 	dbApp, err := db.InitDB(ctx)
 	if err != nil {
 		log.Fatal(errors.ErrorStack(err))
@@ -31,4 +47,5 @@ func main() {
 	}
 
 	pdf.Construct(pdfConstructor)
+
 }
