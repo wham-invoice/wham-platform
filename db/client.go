@@ -31,11 +31,34 @@ type UserRequest struct {
 }
 
 const usersCollection = "users"
+const contactsCollection = "contacts"
 
 func (app *App) GetUser(ctx context.Context, req *UserRequest) (*User, error) {
 	var user = new(User)
 
-	result, err := app.client.Collection(usersCollection).Doc(req.ID).Get(ctx)
+	result, err := app.firestoreClient.Collection(usersCollection).Doc(req.ID).Get(ctx)
+	if err != nil {
+		return user, errors.Trace(err)
+	}
+
+	user.ID = result.Ref.ID
+	if err := result.DataTo(&user); err != nil {
+		return user, errors.Trace(err)
+	}
+
+	address, err := addressfromUserDoc(result)
+	if err != nil {
+		return user, errors.Trace(err)
+	}
+	user.Address = address
+
+	return user, nil
+}
+
+func (app *App) GetContact(ctx context.Context, req *UserRequest) (*User, error) {
+	var user = new(User)
+
+	result, err := app.firestoreClient.Collection(contactsCollection).Doc(req.ID).Get(ctx)
 	if err != nil {
 		return user, errors.Trace(err)
 	}

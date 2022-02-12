@@ -2,36 +2,48 @@ package db
 
 import (
 	"context"
+	"log"
 
 	"cloud.google.com/go/firestore"
-	firebase "firebase.google.com/go"
+	"firebase.google.com/go/v4"
+	"firebase.google.com/go/v4/storage"
 	"github.com/juju/errors"
 	"google.golang.org/api/option"
 )
 
 type App struct {
-	client firestore.Client
+	firestoreClient *firestore.Client
+	storageClient   *storage.Client
 }
 
-func InitDB(ctx context.Context) (*App, error) {
+func Init(ctx context.Context) (*App, error) {
 	var app = new(App)
 
-	// NOTE: This file path is fragile - use relative ?
+	config := &firebase.Config{
+		StorageBucket: "wham-ad61b.appspot.com",
+	}
 	opt := option.WithCredentialsFile("/Users/work/go/src/github.com/rstorr/wham-platform/secrets/firebase_service_account_key.json")
-	firebaseApp, err := firebase.NewApp(ctx, nil, opt)
+	firebaseApp, err := firebase.NewApp(context.Background(), config, opt)
 	if err != nil {
-		return app, errors.Trace(err)
+		log.Fatalln(err)
 	}
-	client, err := firebaseApp.Firestore(ctx)
+
+	fs, err := firebaseApp.Firestore(ctx)
 	if err != nil {
-		return app, errors.Trace(err)
+		log.Printf("%v", err)
+		return nil, errors.Trace(err)
 	}
-	app.client = *client
+	app.firestoreClient = fs
+
+	storage, err := firebaseApp.Storage(ctx)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	app.storageClient = storage
 
 	return app, nil
-
 }
 
 func (a *App) CloseDB() {
-	a.client.Close()
+	a.firestoreClient.Close()
 }

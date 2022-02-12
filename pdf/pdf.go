@@ -2,21 +2,22 @@ package pdf
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/johnfercher/maroto/pkg/color"
 	"github.com/johnfercher/maroto/pkg/consts"
 	"github.com/johnfercher/maroto/pkg/pdf"
 	"github.com/johnfercher/maroto/pkg/props"
+	"github.com/juju/errors"
 	"github.com/rstorr/wham-platform/db"
 	"github.com/rstorr/wham-platform/util"
 )
 
 type PDFConstructor struct {
-	Invoice *db.Invoice
+	Invoice    *db.Invoice
+	OutputPath string
 }
 
-func Construct(p PDFConstructor) {
+func Construct(p PDFConstructor) error {
 
 	blueColor := getBlueColor()
 
@@ -109,11 +110,11 @@ func Construct(p PDFConstructor) {
 		})
 	})
 
-	err := m.OutputFileAndClose("test_dir/billing.pdf")
-	if err != nil {
-		fmt.Println("Could not save PDF:", err)
-		os.Exit(1)
+	if err := m.OutputFileAndClose(p.OutputPath); err != nil {
+		return errors.Annotate(err, "could not save file")
 	}
+
+	return nil
 }
 
 func getBillTo(m pdf.Maroto, client *db.User) {

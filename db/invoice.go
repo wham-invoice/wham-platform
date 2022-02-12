@@ -29,7 +29,7 @@ const invoiceCollection = "invoices"
 func (app *App) GetInvoice(ctx context.Context, req *InvoiceRequest) (*Invoice, error) {
 	var invoice = new(Invoice)
 
-	result, err := app.client.Collection(invoiceCollection).Doc(req.ID).Get(ctx)
+	result, err := app.firestoreClient.Collection(invoiceCollection).Doc(req.ID).Get(ctx)
 	if err != nil {
 		return invoice, errors.Trace(err)
 	}
@@ -55,7 +55,7 @@ func (app *App) GetInvoice(ctx context.Context, req *InvoiceRequest) (*Invoice, 
 	if err != nil {
 		return invoice, errors.Trace(err)
 	}
-	client, err := app.GetUser(ctx, &UserRequest{ID: clientID})
+	client, err := app.GetContact(ctx, &UserRequest{ID: clientID})
 	if err != nil {
 		return invoice, errors.Trace(err)
 	}
@@ -78,16 +78,21 @@ func (i *Invoice) GetTotal() float32 {
 	return i.GetSubtotal() + i.GetGST()
 }
 
+// PutPdf uploads the invoice PDF to the DB.
+func PutPdf() error {
+	return nil
+}
+
 func clientIDFromInvoiceResult(data map[string]interface{}) (string, error) {
 	var id string
 	var ok bool
 
-	if x, found := data["client_id"]; found {
+	if x, found := data["contact_id"]; found {
 		if id, ok = x.(string); !ok {
-			return "", errors.New("client_id was not a string.")
+			return "", errors.New("contact_id was not a string.")
 		}
 	} else {
-		return "", errors.New("client_id not found.")
+		return "", errors.New("contact_id not found.")
 	}
 
 	return id, nil
