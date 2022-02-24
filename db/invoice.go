@@ -10,7 +10,7 @@ import (
 type Invoice struct {
 	ID          string
 	User        *User
-	Client      *User
+	Client      *Contact
 	Number      int       `firestore:"number"`
 	Rate        float32   `firestore:"rate"`
 	Hours       float32   `firestore:"hours"`
@@ -18,6 +18,7 @@ type Invoice struct {
 	IssueDate   time.Time `firestore:"issue_date"`
 	DueDate     time.Time `firestore:"due_date"`
 	Paid        bool      `firestore:"paid"`
+	URLCode     string    `firestore:"url_code"`
 }
 
 type InvoiceRequest struct {
@@ -55,7 +56,7 @@ func (app *App) GetInvoice(ctx context.Context, req *InvoiceRequest) (*Invoice, 
 	if err != nil {
 		return invoice, errors.Trace(err)
 	}
-	client, err := app.GetContact(ctx, &UserRequest{ID: clientID})
+	client, err := app.GetContact(ctx, &ContactRequest{ID: clientID})
 	if err != nil {
 		return invoice, errors.Trace(err)
 	}

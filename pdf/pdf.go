@@ -33,7 +33,8 @@ func Construct(p PDFConstructor) error {
 					Style:       consts.Bold,
 					Extrapolate: false,
 				})
-				m.Text(fmt.Sprintf("Tel: %s", p.Invoice.User.Phone), props.Text{
+				// TODO ask for users phone number.
+				m.Text(fmt.Sprintf("Tel: %s", "ask for users phone"), props.Text{
 					Top:   12,
 					Style: consts.BoldItalic,
 					Size:  8,
@@ -117,7 +118,7 @@ func Construct(p PDFConstructor) error {
 	return nil
 }
 
-func getBillTo(m pdf.Maroto, client *db.User) {
+func getBillTo(m pdf.Maroto, client *db.Contact) {
 	m.Col(3, func() {
 		m.Text("Bill to", props.Text{
 			Top:         3,
