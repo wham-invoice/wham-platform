@@ -14,20 +14,21 @@ import (
 
 type PDFConstructor struct {
 	Invoice    *db.Invoice
+	User       *db.User
+	Contact    *db.Contact
 	OutputPath string
 }
 
 func Construct(p PDFConstructor) error {
 
-	blueColor := getBlueColor()
-
 	m := pdf.NewMaroto(consts.Portrait, consts.A4)
 	m.SetPageMargins(10, 15, 10)
 
+	blueColor := getBlueColor()
 	m.RegisterHeader(func() {
 		m.Row(20, func() {
 			m.Col(3, func() {
-				m.Text(p.Invoice.User.GetFullName(), props.Text{
+				m.Text(p.User.GetFullName(), props.Text{
 					Size:        12,
 					Align:       consts.Left,
 					Style:       consts.Bold,
@@ -49,7 +50,7 @@ func Construct(p PDFConstructor) error {
 	})
 
 	m.Row(30, func() {
-		getBillTo(m, p.Invoice.Client)
+		getBillTo(m, p.Contact)
 		m.ColSpace(6)
 		getInvoiceDetails(m, p.Invoice)
 	})

@@ -5,20 +5,17 @@ import (
 	"fmt"
 
 	"github.com/juju/errors"
-	"github.com/rstorr/wham-platform/server/auth"
 	"golang.org/x/oauth2"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 type User struct {
-	ID           string       `json:"id"`
-	FirstName    string       `firestore:"first_name" json:"first_name"`
-	LastName     string       `firestore:"last_name" json:"last_name"`
-	Email        string       `firestore:"email" json:"email"`
-	AccessToken  string       `firestore:"access_token" json:"access_token"`
-	RefreshToken string       `firestore:"refresh_token" json:"refresh_token"`
-	OAuth        oauth2.Token `json:"oauth_token"`
+	ID        string       `json:"id"`
+	FirstName string       `firestore:"first_name" json:"first_name"`
+	LastName  string       `firestore:"last_name" json:"last_name"`
+	Email     string       `firestore:"email" json:"email"`
+	OAuth     oauth2.Token `json:"oauth_token"`
 }
 
 type UserRequest struct {
@@ -43,8 +40,6 @@ func (app *App) GetUser(ctx context.Context, req *UserRequest) (*User, error) {
 		return user, errors.Trace(err)
 	}
 
-	fmt.Println(user)
-
 	return user, nil
 }
 
@@ -59,21 +54,31 @@ func (u User) GetFullName() string {
 	return fmt.Sprintf("%s %s", u.FirstName, u.LastName)
 }
 
+type UserInfo struct {
+	Email      string `json:"email"`
+	FamilyName string `json:"family_name"`
+	GivenName  string `json:"given_name"`
+	Name       string `json:"name"`
+	Sub        string `json: "sub"`
+	// An identifier for the user,
+	// unique among all Google accounts and never reused.
+	// A Google account can have multiple email addresses at different points in time, but the sub value is never changed.
+	// Use sub within your application as the unique-identifier key for the user
+}
+
 func (app *App) CreateAndSaveUser(
 	ctx context.Context,
 	uid string,
-	info auth.UserInfo,
+	info UserInfo,
 	authToken oauth2.Token,
 ) error {
 
 	user := &User{
-		ID:           uid,
-		FirstName:    info.GivenName,
-		LastName:     info.FamilyName,
-		Email:        info.Email,
-		AccessToken:  authToken.AccessToken,
-		RefreshToken: authToken.RefreshToken,
-		OAuth:        authToken,
+		ID:        uid,
+		FirstName: info.GivenName,
+		LastName:  info.FamilyName,
+		Email:     info.Email,
+		OAuth:     authToken,
 	}
 	return app.AddUser(ctx, user)
 }

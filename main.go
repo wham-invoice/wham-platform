@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
-	"log"
+	"fmt"
+	"os"
 
 	"github.com/rstorr/wham-platform/db"
 	"github.com/rstorr/wham-platform/server"
+	"github.com/rstorr/wham-platform/util"
 
 	"github.com/juju/errors"
 )
@@ -13,13 +15,18 @@ import (
 func main() {
 	ctx := context.Background()
 
+	if err := util.SetDebugLogger(); err != nil {
+		fmt.Fprintf(os.Stderr, "%v", err)
+		os.Exit(1)
+	}
+
 	dbApp, err := db.Init(ctx)
 	if err != nil {
-		log.Fatal(errors.ErrorStack(err))
+		util.Logger.Fatal(errors.ErrorStack(err))
 	}
 	defer dbApp.CloseDB()
 
 	if err = server.Run(dbApp); err != nil {
-		log.Fatal(errors.ErrorStack(err))
+		util.Logger.Fatal(errors.ErrorStack(err))
 	}
 }

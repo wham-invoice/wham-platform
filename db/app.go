@@ -2,10 +2,9 @@ package db
 
 import (
 	"context"
-	"log"
 
 	"cloud.google.com/go/firestore"
-	"firebase.google.com/go/v4"
+	firebase "firebase.google.com/go/v4"
 	"firebase.google.com/go/v4/storage"
 	"github.com/juju/errors"
 	"google.golang.org/api/option"
@@ -25,12 +24,11 @@ func Init(ctx context.Context) (*App, error) {
 	opt := option.WithCredentialsFile("/Users/work/go/src/github.com/rstorr/wham-platform/secrets/firebase_service_account_key.json")
 	firebaseApp, err := firebase.NewApp(context.Background(), config, opt)
 	if err != nil {
-		log.Fatalln(err)
+		return nil, errors.Trace(err)
 	}
 
 	fs, err := firebaseApp.Firestore(ctx)
 	if err != nil {
-		log.Printf("%v", err)
 		return nil, errors.Trace(err)
 	}
 	app.firestoreClient = fs
