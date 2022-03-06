@@ -1,3 +1,9 @@
-#Session management
+# Wham Platform
 
-https://medium.com/wesionary-team/session-management-in-golang-gin-framework-using-redis-with-e-1f17b6980924
+Backend that handles sessions and does CRUD operations on the firestore DB.
+
+# How to run 
+
+`go run main.go`
+ 
+ TODO: flesh out how to run.
