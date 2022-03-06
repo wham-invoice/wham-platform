@@ -31,10 +31,6 @@ type NewInvoiceRequest struct {
 	Rate        float32 `json:"rate" binding:"required"`
 }
 
-type GetInvoiceRequest struct {
-	ID string `json:"invoice_id" binding:"required"`
-}
-
 func newInvoiceHandler(c *gin.Context) {
 	ctx := context.Background()
 
@@ -61,20 +57,18 @@ func newInvoiceHandler(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
+func getAllInvoiceHandler(c *gin.Context) {}
+
 func getInvoiceHandler(c *gin.Context) {
 	ctx := context.Background()
-
-	var req GetInvoiceRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-	}
+	invoiceID := c.Param("id")
 
 	dbApp, err := getDataBase(c)
 	if err != nil {
 		c.AbortWithError(http.StatusInternalServerError, errors.Trace(err))
 	}
 
-	invoice, err := dbApp.GetInvoice(ctx, &db.InvoiceRequest{ID: req.ID})
+	invoice, err := dbApp.GetInvoice(ctx, &db.InvoiceRequest{ID: invoiceID})
 	if err != nil {
 		c.AbortWithError(http.StatusInternalServerError, errors.Trace(err))
 	}

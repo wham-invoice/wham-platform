@@ -9,6 +9,7 @@ import (
 	"github.com/rstorr/wham-platform/util"
 	"golang.org/x/oauth2"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/redis"
 	"github.com/gin-gonic/gin"
@@ -58,17 +59,28 @@ func Run(dbApp *db.App) error {
 	util.Logger.Infof("connected to redis on %s", storeAddr)
 
 	router := gin.Default()
+
+	// - No origin allowed by default
+	// - GET,POST, PUT, HEAD methods
+	// - Credentials share disabled
+	// - Preflight requests cached for 12 hours
+	config := cors.DefaultConfig()
+	config.AllowOrigins = []string{"http://localhost:3000"}
+
+	router.Use(cors.New(config))
+
 	// NOTE does multiple sessions work?
 	router.Use(sessions.Sessions("user_session", store))
 	router.Use(ApiMiddleware(dbApp))
 	router.POST("/auth", authenticateHandler)
+	router.GET("/invoice/get/:id", getInvoiceHandler)
 
 	auth := router.Group("/")
 	auth.Use(AuthMiddleware())
 	{
 		auth.POST("/invoice/email", emailInvoiceHandler)
 		auth.POST("/invoice/new", newInvoiceHandler)
-		auth.POST("/invoice/get", getInvoiceHandler)
+		auth.GET("/invoice/getAll", getAllInvoiceHandler)
 	}
 
 	return router.Run(":8080")
