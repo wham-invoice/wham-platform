@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/rstorr/wham-platform/db"
 	"github.com/rstorr/wham-platform/server"
 	"github.com/rstorr/wham-platform/util"
 
@@ -20,13 +19,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	dbApp, err := db.Init(ctx)
-	if err != nil {
-		util.Logger.Fatal(errors.ErrorStack(err))
-	}
-	defer dbApp.CloseDB()
-
-	if err = server.Run(dbApp); err != nil {
+	if err := server.Run(ctx); err != nil {
 		util.Logger.Fatal(errors.ErrorStack(err))
 	}
 }

@@ -18,16 +18,12 @@ type User struct {
 	OAuth     oauth2.Token `json:"oauth_token"`
 }
 
-type UserRequest struct {
-	ID string
-}
-
 const usersCollection = "users"
 
-func (app *App) GetUser(ctx context.Context, req *UserRequest) (*User, error) {
+func (app *App) GetUser(ctx context.Context, id string) (*User, error) {
 	var user = new(User)
 
-	result, err := app.firestoreClient.Collection(usersCollection).Doc(req.ID).Get(ctx)
+	result, err := app.firestoreClient.Collection(usersCollection).Doc(id).Get(ctx)
 	if err != nil {
 		if status.Code(err) == codes.NotFound {
 			return nil, nil
@@ -52,6 +48,10 @@ func (app *App) AddUser(ctx context.Context, user *User) error {
 
 func (u User) GetFullName() string {
 	return fmt.Sprintf("%s %s", u.FirstName, u.LastName)
+}
+
+func (u User) Invoices(ctx context.Context, app *App) ([]Invoice, error) {
+	return app.GetInvoicesForUser(ctx, u.ID)
 }
 
 type UserInfo struct {

@@ -1,4 +1,4 @@
-package server
+package handler
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/rstorr/wham-platform/db"
+	"github.com/rstorr/wham-platform/server/route"
 	"github.com/rstorr/wham-platform/util"
 
 	"github.com/juju/errors"
@@ -30,32 +31,30 @@ type GoogleToken struct {
 	IdToken      string `json:"id_token"`
 }
 
-func authenticateHandler(c *gin.Context) {
-	//TODO if request does not have 'x-requested-with' header this could be a CSRF
-	var req AuthRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-	}
+var Auth = route.Endpoint{
+	Method: "POST",
+	Path:   "/auth",
+	Do: func(c *gin.Context) (interface{}, error) {
+		app := MustApp(c)
 
-	dbApp, err := getDataBase(c)
-	if err != nil {
-		util.Logger.Errorf("Error getting database: %s \n %s", err.Error(), errors.ErrorStack(err))
-		c.AbortWithError(http.StatusInternalServerError, errors.Trace(err))
-	}
+		var req AuthRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		}
 
-	ctx := context.Background()
-	user, err := authenticate(ctx, dbApp, req)
-	if err != nil {
-		util.Logger.Errorf("Error authenticating user: %s \n %s", err.Error(), errors.ErrorStack(err))
-		c.AbortWithError(http.StatusInternalServerError, errors.Trace(err))
-	}
+		ctx := context.Background()
+		user, err := authenticate(ctx, app, req)
+		if err != nil {
+			return nil, errors.Annotate(err, "Error authenticating user")
+		}
 
-	s := sessions.Default(c)
-	if err = setSession(s, user.ID); err != nil {
-		c.AbortWithError(http.StatusInternalServerError, err)
-	}
+		s := sessions.Default(c)
+		if err = SetSession(s, user); err != nil {
+			return nil, errors.Annotate(err, "Error setting session")
+		}
 
-	c.IndentedJSON(http.StatusOK, user)
+		return user, nil
+	},
 }
 
 // handleAuth retrieves a User from the request and starts a session.
@@ -69,7 +68,7 @@ func authenticate(ctx context.Context, app *db.App, req AuthRequest) (*db.User, 
 	}
 
 	// see if we already have a user
-	user, err = app.GetUser(ctx, &db.UserRequest{ID: req.UID})
+	user, err = app.GetUser(ctx, req.UID)
 	if err != nil {
 		return user, errors.Trace(err)
 	}
@@ -89,7 +88,7 @@ func authenticate(ctx context.Context, app *db.App, req AuthRequest) (*db.User, 
 			return user, errors.Trace(err)
 		}
 
-		user, err = app.GetUser(ctx, &db.UserRequest{ID: req.UID})
+		user, err = app.GetUser(ctx, req.UID)
 		if err != nil {
 			return user, errors.Trace(err)
 		}
@@ -149,10 +148,4 @@ func unpackIdToken(ctx context.Context, token string) (db.UserInfo, error) {
 	}
 
 	return info, nil
-}
-
-func setSession(session sessions.Session, id string) error {
-	session.Set(user_id_session_key, id)
-
-	return session.Save()
 }

@@ -6,6 +6,7 @@ import (
 
 	"cloud.google.com/go/firestore"
 	"github.com/juju/errors"
+	"google.golang.org/api/iterator"
 )
 
 type Contact struct {
@@ -26,16 +27,12 @@ type Address struct {
 	Country    string `firestore:"address_country"`
 }
 
-type ContactRequest struct {
-	ID string
-}
-
 const contactsCollection = "contacts"
 
-func (app *App) GetContact(ctx context.Context, req *ContactRequest) (*Contact, error) {
+func (app *App) GetContact(ctx context.Context, id string) (*Contact, error) {
 	var contact = new(Contact)
 
-	result, err := app.firestoreClient.Collection(contactsCollection).Doc(req.ID).Get(ctx)
+	result, err := app.firestoreClient.Collection(contactsCollection).Doc(id).Get(ctx)
 	if err != nil {
 		return contact, errors.Trace(err)
 	}
@@ -54,6 +51,38 @@ func (app *App) GetContact(ctx context.Context, req *ContactRequest) (*Contact, 
 	return contact, nil
 }
 
+func (app *App) getContactsForUser(ctx context.Context, userID string) ([]Contact, error) {
+	contacts := []Contact{}
+
+	iter := app.firestoreClient.Collection(contactsCollection).Where("user_id", "==", userID).Documents(ctx)
+	for {
+		var contact = new(Contact)
+		doc, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return contacts, err
+		}
+
+		contact.ID = doc.Ref.ID
+		if err := doc.DataTo(&contact); err != nil {
+			return contacts, errors.Trace(err)
+		}
+
+		address, err := addressfromUserDoc(doc)
+		if err != nil {
+			return contacts, errors.Trace(err)
+		}
+		contact.Address = address
+
+		contacts = append(contacts, *contact)
+
+	}
+
+	return contacts, nil
+}
+
 func addressfromUserDoc(doc *firestore.DocumentSnapshot) (*Address, error) {
 	var address = new(Address)
 	if err := doc.DataTo(&address); err != nil {
@@ -66,4 +95,3 @@ func addressfromUserDoc(doc *firestore.DocumentSnapshot) (*Address, error) {
 func (c Contact) GetFullName() string {
 	return fmt.Sprintf("%s %s", c.FirstName, c.LastName)
 }
-

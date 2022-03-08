@@ -1,4 +1,4 @@
-package server
+package handler
 
 import (
 	"context"
@@ -11,6 +11,7 @@ import (
 	"github.com/rstorr/wham-platform/db"
 	"github.com/rstorr/wham-platform/email"
 	"github.com/rstorr/wham-platform/pdf"
+	"github.com/rstorr/wham-platform/server/route"
 	"github.com/rstorr/wham-platform/util"
 
 	"github.com/juju/errors"
@@ -31,97 +32,90 @@ type NewInvoiceRequest struct {
 	Rate        float32 `json:"rate" binding:"required"`
 }
 
-func newInvoiceHandler(c *gin.Context) {
-	ctx := context.Background()
+var Invoice = route.Endpoint{
+	Method:  "GET",
+	Path:    "/invoice/get/:invoice_id",
+	Prereqs: route.Prereqs(InvoiceAccess()),
+	Do: func(c *gin.Context) (interface{}, error) {
+		invoice := MustInvoice(c)
 
-	var req NewInvoiceRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-	}
-
-	userID, err := getUserID(c)
-	if err != nil {
-		c.AbortWithError(http.StatusInternalServerError, errors.Trace(err))
-	}
-
-	dbApp, err := getDataBase(c)
-	if err != nil {
-		c.AbortWithError(http.StatusInternalServerError, errors.Trace(err))
-	}
-
-	i := invoiceFromRequest(req, userID)
-	if err := NewInvoice(ctx, dbApp, i); err != nil {
-		c.AbortWithError(http.StatusInternalServerError, errors.Trace(err))
-	}
-
-	c.Status(http.StatusOK)
+		return &invoice, nil
+	},
 }
 
-func getAllInvoiceHandler(c *gin.Context) {}
+// TODO pagination
+var AllInvoices = route.Endpoint{
+	Method:  "GET",
+	Path:    "/invoice/getAll",
+	Prereqs: route.Prereqs(InvoiceAccess()),
+	Do: func(c *gin.Context) (interface{}, error) {
+		ctx := context.Background()
+		app := MustApp(c)
+		user := MustUser(c)
 
-func getInvoiceHandler(c *gin.Context) {
-	ctx := context.Background()
-	invoiceID := c.Param("id")
+		invoices, err := user.Invoices(ctx, app)
+		if err != nil {
+			c.AbortWithError(http.StatusInternalServerError, errors.Annotate(err, "cannot get invoices"))
+		}
 
-	dbApp, err := getDataBase(c)
-	if err != nil {
-		c.AbortWithError(http.StatusInternalServerError, errors.Trace(err))
-	}
-
-	invoice, err := dbApp.GetInvoice(ctx, &db.InvoiceRequest{ID: invoiceID})
-	if err != nil {
-		c.AbortWithError(http.StatusInternalServerError, errors.Trace(err))
-	}
-
-	c.JSON(http.StatusOK, gin.H{"invoice": invoice})
+		return invoices, nil
+	},
 }
 
-func emailInvoiceHandler(c *gin.Context) {
-	ctx := context.Background()
+// NOTE: shouldn't this return the created invoice?
+var NewInvoice = route.Endpoint{
+	Method:  "POST",
+	Path:    "/invoice/new",
+	Prereqs: route.Prereqs(InvoiceAccess()),
+	Do: func(c *gin.Context) (interface{}, error) {
+		ctx := context.Background()
+		app := MustApp(c)
+		user := MustUser(c)
 
-	var req EmailInvoiceRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		util.Logger.Error(errors.ErrorStack(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-	}
+		var req NewInvoiceRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		}
 
-	dbApp, err := getDataBase(c)
-	if err != nil {
-		util.Logger.Error(errors.ErrorStack(err))
-		c.AbortWithError(http.StatusInternalServerError, errors.Trace(err))
-	}
+		i := invoiceFromRequest(req, user.ID)
+		if err := newInvoice(ctx, app, i); err != nil {
+			c.AbortWithError(http.StatusInternalServerError, errors.Annotate(err, "cannot add new invoice"))
+		}
 
-	userID, err := getUserID(c)
-	if err != nil {
-		util.Logger.Error(errors.ErrorStack(err))
-		c.AbortWithError(http.StatusInternalServerError, errors.Trace(err))
-	}
-
-	user, err := dbApp.GetUser(ctx, &db.UserRequest{ID: userID})
-	if err != nil {
-		util.Logger.Error(errors.ErrorStack(err))
-		c.AbortWithError(http.StatusInternalServerError, errors.Trace(err))
-	}
-
-	i, err := dbApp.GetInvoice(ctx, &db.InvoiceRequest{ID: req.ID})
-	if err != nil {
-		util.Logger.Error(errors.ErrorStack(err))
-		c.AbortWithError(http.StatusInternalServerError, errors.Trace(err))
-	}
-
-	contact, err := dbApp.GetContact(ctx, &db.ContactRequest{ID: i.ContactID})
-	if err != nil {
-		util.Logger.Error(errors.ErrorStack(err))
-		c.AbortWithError(http.StatusInternalServerError, errors.Trace(err))
-	}
-
-	if err := emailInvoice(ctx, i, user, contact); err != nil {
-		util.Logger.Error(errors.ErrorStack(err))
-		c.AbortWithError(http.StatusInternalServerError, errors.Trace(err))
-	}
+		return nil, nil
+	},
 }
 
-func NewInvoice(ctx context.Context, dbApp *db.App, invoice *db.Invoice) error {
+var EmailInvoice = route.Endpoint{
+	Method:  "GET",
+	Path:    "/invoice/get/:invoice_id",
+	Prereqs: route.Prereqs(InvoiceAccess()),
+	Do: func(c *gin.Context) (interface{}, error) {
+		ctx := context.Background()
+		invoice := MustInvoice(c)
+		app := MustApp(c)
+		user := MustUser(c)
+
+		var req EmailInvoiceRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		}
+
+		contact, err := app.GetContact(ctx, invoice.ContactID)
+		if err != nil {
+			util.Logger.Error(errors.ErrorStack(err))
+			c.AbortWithError(http.StatusInternalServerError, errors.Trace(err))
+		}
+
+		if err := emailInvoice(ctx, invoice, user, contact); err != nil {
+			c.AbortWithError(http.StatusInternalServerError, errors.Trace(err))
+		}
+
+		return nil, nil
+	},
+}
+
+func newInvoice(ctx context.Context, dbApp *db.App, invoice *db.Invoice) error {
 
 	pdfID, err := createPDF(ctx, dbApp, invoice)
 	if err != nil {
@@ -151,8 +145,6 @@ func emailInvoice(
 	if err != nil {
 		return errors.Trace(err)
 	}
-
-	util.Logger.Infof("%v", &user.OAuth)
 
 	httpClient := config.Client(context.Background(), &user.OAuth)
 	service, err := gmail.NewService(ctx, option.WithHTTPClient(httpClient))

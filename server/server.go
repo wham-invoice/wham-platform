@@ -1,16 +1,14 @@
 package server
 
 import (
+	"context"
 	"encoding/gob"
 	"fmt"
-	"net/http"
 
 	"github.com/rstorr/wham-platform/db"
-	"github.com/rstorr/wham-platform/util"
+	"github.com/rstorr/wham-platform/server/handler"
 	"golang.org/x/oauth2"
 
-	"github.com/gin-contrib/cors"
-	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/redis"
 	"github.com/gin-gonic/gin"
 	"github.com/juju/errors"
@@ -32,56 +30,62 @@ func ApiMiddleware(dbApp *db.App) gin.HandlerFunc {
 	}
 }
 
-// AuthMiddleware ensures that a current session exists.
-func AuthMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		session := sessions.Default(c)
-		userID := session.Get(user_id_session_key)
-		if userID == nil {
-			c.JSON(http.StatusNotFound, gin.H{
-				"message": "unauthorized",
-			})
-			c.Abort()
-		}
-		c.Set(user_id_gin_key, userID)
-		c.Next()
+// TODO requests need to run async.
+// TODO look at platform/service/api/main.go for reference.
+func Run(ctx context.Context) error {
+	var cfg handler.Config
+	addr, err := configure(ctx, &cfg)
+	if err != nil {
+		return errors.Annotate(err, "cannot configure")
 	}
+
+	root, err := handler.Root(cfg)
+	if err != nil {
+		return errors.Annotate(err, "cannot create handler")
+	}
+
+	// config := cors.DefaultConfig()
+	// config.AllowOrigins = []string{"http://localhost:3000"}
+
+	// router.Use(cors.New(config))
+
+	// router.POST("/auth", authenticateHandler)
+	// router.GET("/pdf/get/:id", GetPDFhandler)
+
+	// auth := router.Group("/invoice")
+	// auth.Use(AuthMiddleware())
+	// {
+	// 	auth.POST("/invoice/email", emailInvoiceHandler)
+	// 	auth.POST("/invoice/new", newInvoiceHandler)
+	// 	auth.GET("/invoice/getAll", getAllInvoiceHandler)
+
+	// 	auth.GET("/contact/get/:id", getContactHandler)
+	// }
+
+	ngin := gin.New()
+	root.Install(&ngin.RouterGroup)
+	return ngin.Run(addr)
 }
 
-// TODO requests need to run async.
-func Run(dbApp *db.App) error {
+func configure(ctx context.Context, cfg *handler.Config) (string, error) {
+
+	addr := "0.0.0.0:8080"
+
+	cfg.AllowOrigin = "http://localhost:3000"
+
 	// TODO i think 'secret' needs to be an actual secret...
-	storeAddr := fmt.Sprintf("%s:%d", "localhost", 6379)
-	store, err := redis.NewStore(10, "tcp", storeAddr, "", []byte("secret"))
+	store, err := redis.NewStore(10, "tcp", fmt.Sprintf("%s:%d", "localhost", 6379), "", []byte("secret"))
 	if err != nil {
-		return errors.Trace(err)
+		return "", errors.Annotate(err, "cannot set up redis store")
 	}
-	util.Logger.Infof("connected to redis on %s", storeAddr)
+	cfg.RedisStore = &store
 
-	router := gin.Default()
-
-	// - No origin allowed by default
-	// - GET,POST, PUT, HEAD methods
-	// - Credentials share disabled
-	// - Preflight requests cached for 12 hours
-	config := cors.DefaultConfig()
-	config.AllowOrigins = []string{"http://localhost:3000"}
-
-	router.Use(cors.New(config))
-
-	// NOTE does multiple sessions work?
-	router.Use(sessions.Sessions("user_session", store))
-	router.Use(ApiMiddleware(dbApp))
-	router.POST("/auth", authenticateHandler)
-	router.GET("/invoice/get/:id", getInvoiceHandler)
-
-	auth := router.Group("/")
-	auth.Use(AuthMiddleware())
-	{
-		auth.POST("/invoice/email", emailInvoiceHandler)
-		auth.POST("/invoice/new", newInvoiceHandler)
-		auth.GET("/invoice/getAll", getAllInvoiceHandler)
+	// Set this up last, once everything else looks like it worked.
+	// Don't bother to close, it should live as long as the process anyway.
+	cfg.AppDB, err = db.Init(ctx)
+	if err != nil {
+		return "", errors.Annotate(err, "cannot set up application DB")
 	}
 
-	return router.Run(":8080")
+	return addr, nil
 }
