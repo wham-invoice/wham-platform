@@ -7,7 +7,12 @@ import (
 	"time"
 
 	"github.com/juju/errors"
+	"google.golang.org/api/iterator"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
+
+var InvoiceNotFound = errors.New("invoice not found")
 
 type Invoice struct {
 	ID          string
@@ -43,26 +48,56 @@ func (app *App) AddInvoice(ctx context.Context, invoice *Invoice) error {
 func (app *App) GetInvoice(ctx context.Context, req *InvoiceRequest) (*Invoice, error) {
 	var invoice = new(Invoice)
 
-	result, err := app.firestoreClient.Collection(invoiceCollection).Doc(req.ID).Get(ctx)
+	doc, err := app.firestoreClient.Collection(invoiceCollection).Doc(req.ID).Get(ctx)
+	if status.Code(err) == codes.NotFound {
+		return invoice, InvoiceNotFound
+	}
+
 	if err != nil {
 		return invoice, errors.Trace(err)
 	}
 
-	invoice.ID = result.Ref.ID
+	invoice.ID = doc.Ref.ID
 
-	if err := result.DataTo(&invoice); err != nil {
+	if err := doc.DataTo(&invoice); err != nil {
 		return invoice, errors.Trace(err)
 	}
 
 	return invoice, nil
 }
 
+func (app *App) GetInvoicesForUser(ctx context.Context, userID string) ([]Invoice, error) {
+	invoices := []Invoice{}
+
+	iter := app.firestoreClient.Collection(invoiceCollection).Where("user_id", "==", userID).Documents(ctx)
+	for {
+		var invoice = new(Invoice)
+		doc, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return invoices, err
+		}
+
+		invoice.ID = doc.Ref.ID
+
+		if err := doc.DataTo(&invoice); err != nil {
+			return invoices, errors.Trace(err)
+		}
+
+		invoices = append(invoices, *invoice)
+	}
+
+	return invoices, nil
+}
+
 func (i *Invoice) GetUser(ctx context.Context, app *App) (*User, error) {
-	return app.GetUser(ctx, &UserRequest{ID: i.UserID})
+	return app.GetUser(ctx, i.UserID)
 }
 
 func (i *Invoice) GetContact(ctx context.Context, app *App) (*Contact, error) {
-	return app.GetContact(ctx, &ContactRequest{ID: i.ContactID})
+	return app.GetContact(ctx, i.ContactID)
 }
 
 func (i *Invoice) GetSubtotal() float32 {
