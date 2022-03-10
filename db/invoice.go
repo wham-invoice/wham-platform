@@ -132,7 +132,7 @@ func (app *App) invoicesForUser(ctx context.Context, userID string) ([]Invoice, 
 }
 
 func (i *Invoice) User(ctx context.Context, app *App) (*User, error) {
-	return app.GetUser(ctx, i.UserID)
+	return app.User(ctx, i.UserID)
 }
 
 func (i *Invoice) Contact(ctx context.Context, app *App) (*Contact, error) {

@@ -20,7 +20,7 @@ type User struct {
 
 const usersCollection = "users"
 
-func (app *App) GetUser(ctx context.Context, id string) (*User, error) {
+func (app *App) User(ctx context.Context, id string) (*User, error) {
 	var user = new(User)
 
 	result, err := app.firestoreClient.Collection(usersCollection).Doc(
@@ -71,7 +71,7 @@ type UserInfo struct {
 	// Use sub within your application as the unique-identifier key for the user
 }
 
-func (app *App) CreateAndSaveUser(
+func (app *App) NewUser(
 	ctx context.Context,
 	uid string,
 	info UserInfo,

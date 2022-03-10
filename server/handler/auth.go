@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rstorr/wham-platform/db"
@@ -30,6 +31,7 @@ type GoogleToken struct {
 	IdToken      string `json:"id_token"`
 }
 
+// TODO we need to keep an eye on oauth2 expiries and refresh tokens when necessary.
 var Auth = route.Endpoint{
 	Method: "POST",
 	Path:   "/auth",
@@ -52,6 +54,9 @@ var Auth = route.Endpoint{
 			return nil, errors.Annotate(err, "Error setting session")
 		}
 
+		// NOTE pretty sure this is only removing Oauth from this func.
+		user.OAuth = oauth2.Token{}
+
 		return user, nil
 	},
 }
@@ -67,18 +72,18 @@ func authenticate(ctx context.Context, app *db.App, req AuthRequest) (*db.User, 
 	}
 
 	// see if we already have a user
-	user, err = app.GetUser(ctx, req.UID)
+	user, err = app.User(ctx, req.UID)
 	if err != nil {
 		return user, errors.Trace(err)
 	}
-
 	if user == nil {
+
 		authToken, err := googleExchange(req.Code)
 		if err != nil {
 			return user, errors.Trace(err)
 		}
 
-		if err = app.CreateAndSaveUser(
+		if err = app.NewUser(
 			ctx,
 			req.UID,
 			userInfo,
@@ -87,12 +92,12 @@ func authenticate(ctx context.Context, app *db.App, req AuthRequest) (*db.User, 
 			return user, errors.Trace(err)
 		}
 
-		user, err = app.GetUser(ctx, req.UID)
+		user, err = app.User(ctx, req.UID)
 		if err != nil {
 			return user, errors.Trace(err)
 		}
 	}
-	// TODO don't return user.oauth in response
+
 	return user, errors.Trace(err)
 }
 
@@ -123,6 +128,10 @@ func googleExchange(serverAuthCode string) (oauth2.Token, error) {
 	if err = json.NewDecoder(resp.Body).Decode(&token); err != nil {
 		return token, errors.Trace(err)
 	}
+
+	now := time.Now()
+	expiry := now.Add(time.Duration(55) * time.Minute)
+	token.Expiry = expiry
 
 	return token, nil
 }
