@@ -178,7 +178,9 @@ func emailInvoice(
 		"Thanks.\n"+
 		"%s", contact.FirstName, invoiceURL, user.FirstName)
 
-	return errors.Trace(email.GmailSend(service, "me", contact.Email, "Invoice", body))
+	return errors.Trace(
+		email.GmailSend(service, "me", contact.Email, "Invoice", body),
+	)
 }
 
 func invoiceFromRequest(req NewInvoiceRequest, userID string) *db.Invoice {
