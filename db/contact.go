@@ -29,12 +29,16 @@ type Address struct {
 
 const contactsCollection = "contacts"
 
-func (app *App) GetContact(ctx context.Context, id string) (*Contact, error) {
+func (app *App) Contact(ctx context.Context, id string) (*Contact, error) {
 	var contact = new(Contact)
 
 	result, err := app.firestoreClient.Collection(contactsCollection).Doc(id).Get(ctx)
 	if err != nil {
 		return contact, errors.Trace(err)
+	}
+
+	if !result.Exists() {
+		return contact, errors.Errorf("contact with ID does not exist: %s" + id)
 	}
 
 	contact.ID = result.Ref.ID
@@ -51,7 +55,7 @@ func (app *App) GetContact(ctx context.Context, id string) (*Contact, error) {
 	return contact, nil
 }
 
-func (app *App) getContactsForUser(ctx context.Context, userID string) ([]Contact, error) {
+func (app *App) contactsForUser(ctx context.Context, userID string) ([]Contact, error) {
 	contacts := []Contact{}
 
 	iter := app.firestoreClient.Collection(contactsCollection).Where("user_id", "==", userID).Documents(ctx)

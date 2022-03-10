@@ -20,6 +20,7 @@ const database_conn_gin_key = "database_connection_key"
 
 func init() {
 	gob.Register(oauth2.Token{})
+	gob.Register(db.User{})
 }
 
 // ApiMiddleware will add the db connection to the context
@@ -43,24 +44,6 @@ func Run(ctx context.Context) error {
 	if err != nil {
 		return errors.Annotate(err, "cannot create handler")
 	}
-
-	// config := cors.DefaultConfig()
-	// config.AllowOrigins = []string{"http://localhost:3000"}
-
-	// router.Use(cors.New(config))
-
-	// router.POST("/auth", authenticateHandler)
-	// router.GET("/pdf/get/:id", GetPDFhandler)
-
-	// auth := router.Group("/invoice")
-	// auth.Use(AuthMiddleware())
-	// {
-	// 	auth.POST("/invoice/email", emailInvoiceHandler)
-	// 	auth.POST("/invoice/new", newInvoiceHandler)
-	// 	auth.GET("/invoice/getAll", getAllInvoiceHandler)
-
-	// 	auth.GET("/contact/get/:id", getContactHandler)
-	// }
 
 	ngin := gin.New()
 	root.Install(&ngin.RouterGroup)

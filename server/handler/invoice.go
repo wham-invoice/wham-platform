@@ -5,17 +5,14 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rstorr/wham-platform/db"
 	"github.com/rstorr/wham-platform/email"
 	"github.com/rstorr/wham-platform/pdf"
 	"github.com/rstorr/wham-platform/server/route"
-	"github.com/rstorr/wham-platform/util"
 
 	"github.com/juju/errors"
-	uuid "github.com/satori/go.uuid"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/gmail/v1"
 	"google.golang.org/api/option"
@@ -35,7 +32,7 @@ type NewInvoiceRequest struct {
 var Invoice = route.Endpoint{
 	Method:  "GET",
 	Path:    "/invoice/get/:invoice_id",
-	Prereqs: route.Prereqs(InvoiceAccess()),
+	Prereqs: route.Prereqs(InvoiceExists()),
 	Do: func(c *gin.Context) (interface{}, error) {
 		invoice := MustInvoice(c)
 
@@ -43,11 +40,26 @@ var Invoice = route.Endpoint{
 	},
 }
 
+// ViewInvoice is a handler for viewing an invoice on wham-web. We return the associated invoice,
+// user and contact info.
+var ViewInvoice = route.Endpoint{
+	Method:  "GET",
+	Path:    "/invoice/view/:invoice_id",
+	Prereqs: route.Prereqs(InvoiceExists()),
+	Do: func(c *gin.Context) (interface{}, error) {
+		ctx := context.Background()
+		app := MustApp(c)
+		invoice := MustInvoice(c)
+
+		return invoice.Detail(ctx, app)
+	},
+}
+
 // TODO pagination
 var AllInvoices = route.Endpoint{
 	Method:  "GET",
 	Path:    "/invoice/getAll",
-	Prereqs: route.Prereqs(InvoiceAccess()),
+	Prereqs: route.Prereqs(InvoiceExists()),
 	Do: func(c *gin.Context) (interface{}, error) {
 		ctx := context.Background()
 		app := MustApp(c)
@@ -55,7 +67,7 @@ var AllInvoices = route.Endpoint{
 
 		invoices, err := user.Invoices(ctx, app)
 		if err != nil {
-			c.AbortWithError(http.StatusInternalServerError, errors.Annotate(err, "cannot get invoices"))
+			return nil, errors.Annotate(err, "cannot get invoices")
 		}
 
 		return invoices, nil
@@ -64,9 +76,8 @@ var AllInvoices = route.Endpoint{
 
 // NOTE: shouldn't this return the created invoice?
 var NewInvoice = route.Endpoint{
-	Method:  "POST",
-	Path:    "/invoice/new",
-	Prereqs: route.Prereqs(InvoiceAccess()),
+	Method: "POST",
+	Path:   "/invoice/new",
 	Do: func(c *gin.Context) (interface{}, error) {
 		ctx := context.Background()
 		app := MustApp(c)
@@ -74,60 +85,68 @@ var NewInvoice = route.Endpoint{
 
 		var req NewInvoiceRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			c.AbortWithError(http.StatusBadRequest, errors.Annotate(err, "cannot bind request"))
+			return nil, nil
 		}
 
 		i := invoiceFromRequest(req, user.ID)
-		if err := newInvoice(ctx, app, i); err != nil {
-			c.AbortWithError(http.StatusInternalServerError, errors.Annotate(err, "cannot add new invoice"))
+
+		contact, err := app.Contact(ctx, i.ContactID)
+		if err != nil {
+			return nil, errors.Annotate(err, "cannot get contact ")
+		}
+
+		pdfBuilder := &pdf.Builder{
+			App:     app,
+			Invoice: i,
+			User:    user,
+			Contact: contact}
+		pdfID, err := pdf.CreatePDF(ctx, *pdfBuilder)
+		if err != nil {
+			return nil, errors.Annotate(err, "cannot create PDF from invoice")
+		}
+
+		i.PDFID = pdfID
+
+		if err := app.AddInvoice(ctx, i); err != nil {
+			return nil, errors.Annotate(err, "cannot add new invoice")
 		}
 
 		return nil, nil
 	},
 }
 
+// TODO invoice_id should be in path then use MustInvoice.
 var EmailInvoice = route.Endpoint{
-	Method:  "GET",
-	Path:    "/invoice/get/:invoice_id",
-	Prereqs: route.Prereqs(InvoiceAccess()),
+	Method: "POST",
+	Path:   "/invoice/email",
 	Do: func(c *gin.Context) (interface{}, error) {
 		ctx := context.Background()
-		invoice := MustInvoice(c)
 		app := MustApp(c)
 		user := MustUser(c)
 
 		var req EmailInvoiceRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return nil, nil
 		}
 
-		contact, err := app.GetContact(ctx, invoice.ContactID)
+		invoice, err := app.Invoice(ctx, req.ID)
 		if err != nil {
-			util.Logger.Error(errors.ErrorStack(err))
-			c.AbortWithError(http.StatusInternalServerError, errors.Trace(err))
+			return nil, errors.Trace(err)
+		}
+
+		contact, err := app.Contact(ctx, invoice.ContactID)
+		if err != nil {
+			return nil, errors.Trace(err)
 		}
 
 		if err := emailInvoice(ctx, invoice, user, contact); err != nil {
-			c.AbortWithError(http.StatusInternalServerError, errors.Trace(err))
+			return nil, errors.Trace(err)
 		}
 
 		return nil, nil
 	},
-}
-
-func newInvoice(ctx context.Context, dbApp *db.App, invoice *db.Invoice) error {
-
-	pdfID, err := createPDF(ctx, dbApp, invoice)
-	if err != nil {
-		return errors.Trace(err)
-	}
-	invoice.PDFID = pdfID
-
-	if err := dbApp.AddInvoice(ctx, invoice); err != nil {
-		return errors.Trace(err)
-	}
-
-	return nil
 }
 
 func emailInvoice(
@@ -162,33 +181,10 @@ func emailInvoice(
 	return errors.Trace(email.GmailSend(service, "me", contact.Email, "Invoice", body))
 }
 
-// createPDF creates a PDF from an invoice ID and stores the file in firebase.
-// We delete the file from local disk. Finally we return the ID of the file in firebase.
-func createPDF(ctx context.Context, dbApp *db.App, invoice *db.Invoice) (string, error) {
-
-	pdfID := uuid.NewV4().String()
-
-	filePath := fmt.Sprintf("invoices/%s.pdf", pdfID)
-
-	if err := pdf.Construct(pdf.PDFConstructor{
-		Invoice:    invoice,
-		OutputPath: filePath,
-	}); err != nil {
-		return "", errors.Trace(err)
-	}
-	if err := dbApp.UploadPDFDeleteLocal(ctx, pdfID, filePath); err != nil {
-		return "", errors.Trace(err)
-	}
-	if err := os.Remove(filePath); err != nil {
-		return "", errors.Trace(err)
-	}
-
-	return pdfID, nil
-}
-
 func invoiceFromRequest(req NewInvoiceRequest, userID string) *db.Invoice {
 	return &db.Invoice{
 		UserID:      userID,
+		ContactID:   req.ContactID,
 		Description: req.Description,
 		Rate:        req.Rate,
 		Hours:       req.Hours,

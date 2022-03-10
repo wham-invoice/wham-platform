@@ -4,6 +4,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/juju/errors"
+	"github.com/rstorr/wham-platform/util"
 )
 
 // Installer configures a gin.RouterGroup.
@@ -40,6 +42,7 @@ func (ep Endpoint) Install(rg *gin.RouterGroup) {
 	handlers := append(ep.Prereqs, func(c *gin.Context) {
 		resp, err := ep.Do(c)
 		if err != nil {
+			util.Logger.Errorf("request failed: %s", errors.ErrorStack(err))
 			Abort(c, err)
 			return
 		}

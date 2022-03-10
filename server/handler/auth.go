@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/rstorr/wham-platform/db"
 	"github.com/rstorr/wham-platform/server/route"
@@ -40,6 +39,7 @@ var Auth = route.Endpoint{
 		var req AuthRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return nil, errors.Annotate(err, "could not bind request")
 		}
 
 		ctx := context.Background()
@@ -48,8 +48,7 @@ var Auth = route.Endpoint{
 			return nil, errors.Annotate(err, "Error authenticating user")
 		}
 
-		s := sessions.Default(c)
-		if err = SetSession(s, user); err != nil {
+		if err = SetSession(c, user); err != nil {
 			return nil, errors.Annotate(err, "Error setting session")
 		}
 
@@ -93,6 +92,7 @@ func authenticate(ctx context.Context, app *db.App, req AuthRequest) (*db.User, 
 			return user, errors.Trace(err)
 		}
 	}
+	// TODO don't return user.oauth in response
 	return user, errors.Trace(err)
 }
 

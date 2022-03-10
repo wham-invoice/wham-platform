@@ -1,7 +1,9 @@
 package pdf
 
 import (
+	"context"
 	"fmt"
+	"os"
 
 	"github.com/johnfercher/maroto/pkg/color"
 	"github.com/johnfercher/maroto/pkg/consts"
@@ -10,16 +12,41 @@ import (
 	"github.com/juju/errors"
 	"github.com/rstorr/wham-platform/db"
 	"github.com/rstorr/wham-platform/util"
+	uuid "github.com/satori/go.uuid"
 )
 
-type PDFConstructor struct {
+type Builder struct {
+	App        *db.App
 	Invoice    *db.Invoice
 	User       *db.User
 	Contact    *db.Contact
 	OutputPath string
 }
 
-func Construct(p PDFConstructor) error {
+// createPDF creates a PDF from an invoice ID and stores the file in firebase.
+// We delete the file from local disk. Finally we return the ID of the file in firebase.
+func CreatePDF(ctx context.Context, b Builder) (string, error) {
+
+	pdfID := uuid.NewV4().String()
+
+	// TODO store in temp folder?
+	filePath := fmt.Sprintf("test_dir/%s.pdf", pdfID)
+	b.OutputPath = filePath
+
+	if err := build(b); err != nil {
+		return "", errors.Trace(err)
+	}
+	if err := b.App.StorePDF(ctx, pdfID, filePath); err != nil {
+		return "", errors.Trace(err)
+	}
+	if err := os.Remove(filePath); err != nil {
+		return "", errors.Trace(err)
+	}
+
+	return pdfID, nil
+}
+
+func build(b Builder) error {
 
 	m := pdf.NewMaroto(consts.Portrait, consts.A4)
 	m.SetPageMargins(10, 15, 10)
@@ -28,7 +55,7 @@ func Construct(p PDFConstructor) error {
 	m.RegisterHeader(func() {
 		m.Row(20, func() {
 			m.Col(3, func() {
-				m.Text(p.User.GetFullName(), props.Text{
+				m.Text(b.User.FullName(), props.Text{
 					Size:        12,
 					Align:       consts.Left,
 					Style:       consts.Bold,
@@ -50,12 +77,12 @@ func Construct(p PDFConstructor) error {
 	})
 
 	m.Row(30, func() {
-		getBillTo(m, p.Contact)
+		getBillTo(m, b.Contact)
 		m.ColSpace(6)
-		getInvoiceDetails(m, p.Invoice)
+		getInvoiceDetails(m, b.Invoice)
 	})
 
-	getTable(m, p.Invoice)
+	getTable(m, b.Invoice)
 
 	m.Row(5, func() {
 		m.Col(9, func() {
@@ -67,7 +94,7 @@ func Construct(p PDFConstructor) error {
 		})
 		m.Col(3, func() {
 			m.Text(
-				fmt.Sprintf("$%.2f", p.Invoice.GetSubtotal()), props.Text{
+				fmt.Sprintf("$%.2f", b.Invoice.GetSubtotal()), props.Text{
 					Top:   5,
 					Size:  10,
 					Align: consts.Right,
@@ -84,7 +111,7 @@ func Construct(p PDFConstructor) error {
 		})
 		m.Col(3, func() {
 			m.Text(
-				fmt.Sprintf("$%.2f", p.Invoice.GetGST()),
+				fmt.Sprintf("$%.2f", b.Invoice.GetGST()),
 				props.Text{
 					Top:   5,
 					Size:  10,
@@ -103,7 +130,7 @@ func Construct(p PDFConstructor) error {
 		})
 		m.Col(3, func() {
 			m.Text(
-				fmt.Sprintf("$%.2f", p.Invoice.GetTotal()),
+				fmt.Sprintf("$%.2f", b.Invoice.GetTotal()),
 				props.Text{
 					Top:   5,
 					Size:  12,
@@ -112,7 +139,7 @@ func Construct(p PDFConstructor) error {
 		})
 	})
 
-	if err := m.OutputFileAndClose(p.OutputPath); err != nil {
+	if err := m.OutputFileAndClose(b.OutputPath); err != nil {
 		return errors.Annotate(err, "could not save file")
 	}
 

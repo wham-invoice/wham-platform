@@ -3,39 +3,59 @@ package db
 import (
 	"context"
 	"io"
-	"log"
+	"io/ioutil"
 	"os"
 	"time"
 
 	"github.com/juju/errors"
+	"github.com/rstorr/wham-platform/util"
 )
 
-// UploadFile uploads an object.
-func (a *App) UploadFile(ctx context.Context, object, filePath string) error {
-	f, err := os.Open(filePath)
-	if err != nil {
-		return errors.Annotatef(err, "failed to open file: %s", filePath)
-	}
-	defer f.Close()
-
-	// NOTE what this do?
+func (app *App) StorePDF(ctx context.Context, fileName, filePath string) error {
+	// NOTE when cancel is called all resources using ctx are released.
 	ctx, cancel := context.WithTimeout(ctx, time.Second*50)
 	defer cancel()
 
-	// Upload an object with storage.Writer.
-	bucket, err := a.storageClient.DefaultBucket()
+	bucket, err := app.storageClient.Bucket("wham-ad61b.appspot.com")
 	if err != nil {
 		return errors.Trace(err)
 	}
 
-	wc := bucket.Object(object).NewWriter(ctx)
-	if _, err = io.Copy(wc, f); err != nil {
+	f, err := os.Open(filePath)
+	if err != nil {
 		return errors.Trace(err)
 	}
-	if err := wc.Close(); err != nil {
+	defer f.Close()
+
+	writer := bucket.Object(fileName).NewWriter(ctx)
+	if _, err = io.Copy(writer, f); err != nil {
+		return errors.Trace(err)
+	}
+	if err := writer.Close(); err != nil {
 		return errors.Trace(err)
 	}
 
-	log.Printf("file %s uploaded as %s", filePath, object)
 	return nil
+}
+
+// PDF returns the PDF file from the storage bucket.
+func (app *App) PDF(ctx context.Context, fileName string) ([]byte, error) {
+
+	bucket, err := app.storageClient.Bucket("wham-ad61b.appspot.com")
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	util.Logger.Infof("attempting to read file %s", fileName)
+	rc, err := bucket.Object(fileName).NewReader(ctx)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	defer rc.Close()
+	body, err := ioutil.ReadAll(rc)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return body, nil
 }

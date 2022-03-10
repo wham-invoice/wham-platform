@@ -2,8 +2,6 @@ package db
 
 import (
 	"context"
-	"io"
-	"os"
 	"time"
 
 	"github.com/juju/errors"
@@ -29,8 +27,17 @@ type Invoice struct {
 	URLCode     string    `firestore:"url_code"`
 }
 
-type InvoiceRequest struct {
-	ID string
+type InvoiceDetail struct {
+	PDFID       string
+	User        *User
+	Contact     *Contact
+	Number      int
+	Rate        float32
+	Hours       float32
+	Description string
+	IssueDate   time.Time
+	DueDate     time.Time
+	Paid        bool
 }
 
 const invoiceCollection = "invoices"
@@ -45,10 +52,10 @@ func (app *App) AddInvoice(ctx context.Context, invoice *Invoice) error {
 	return nil
 }
 
-func (app *App) GetInvoice(ctx context.Context, req *InvoiceRequest) (*Invoice, error) {
+func (app *App) Invoice(ctx context.Context, id string) (*Invoice, error) {
 	var invoice = new(Invoice)
 
-	doc, err := app.firestoreClient.Collection(invoiceCollection).Doc(req.ID).Get(ctx)
+	doc, err := app.firestoreClient.Collection(invoiceCollection).Doc(id).Get(ctx)
 	if status.Code(err) == codes.NotFound {
 		return invoice, InvoiceNotFound
 	}
@@ -66,7 +73,39 @@ func (app *App) GetInvoice(ctx context.Context, req *InvoiceRequest) (*Invoice, 
 	return invoice, nil
 }
 
-func (app *App) GetInvoicesForUser(ctx context.Context, userID string) ([]Invoice, error) {
+func (i *Invoice) Detail(ctx context.Context, app *App) (*InvoiceDetail, error) {
+	user, err := i.User(ctx, app)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	// user without oauth token.
+	userSafe := &User{
+		ID:        user.ID,
+		FirstName: user.FirstName,
+		LastName:  user.LastName,
+		Email:     user.Email,
+	}
+
+	contact, err := i.Contact(ctx, app)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return &InvoiceDetail{
+		PDFID:       i.PDFID,
+		User:        userSafe,
+		Contact:     contact,
+		Number:      i.Number,
+		Rate:        i.Rate,
+		Hours:       i.Hours,
+		Description: i.Description,
+		IssueDate:   i.IssueDate,
+		DueDate:     i.DueDate,
+		Paid:        i.Paid,
+	}, nil
+}
+
+func (app *App) invoicesForUser(ctx context.Context, userID string) ([]Invoice, error) {
 	invoices := []Invoice{}
 
 	iter := app.firestoreClient.Collection(invoiceCollection).Where("user_id", "==", userID).Documents(ctx)
@@ -92,12 +131,12 @@ func (app *App) GetInvoicesForUser(ctx context.Context, userID string) ([]Invoic
 	return invoices, nil
 }
 
-func (i *Invoice) GetUser(ctx context.Context, app *App) (*User, error) {
+func (i *Invoice) User(ctx context.Context, app *App) (*User, error) {
 	return app.GetUser(ctx, i.UserID)
 }
 
-func (i *Invoice) GetContact(ctx context.Context, app *App) (*Contact, error) {
-	return app.GetContact(ctx, i.ContactID)
+func (i *Invoice) Contact(ctx context.Context, app *App) (*Contact, error) {
+	return app.Contact(ctx, i.ContactID)
 }
 
 func (i *Invoice) GetSubtotal() float32 {
@@ -111,28 +150,4 @@ func (i *Invoice) GetGST() float32 {
 
 func (i *Invoice) GetTotal() float32 {
 	return i.GetSubtotal() + i.GetGST()
-}
-
-func (app *App) UploadPDFDeleteLocal(ctx context.Context, fileName, filePath string) error {
-
-	bucket, err := app.storageClient.Bucket("invoice_pdf")
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	f, err := os.Open(filePath)
-	if err != nil {
-		return errors.Trace(err)
-	}
-	defer f.Close()
-
-	writer := bucket.Object(fileName).NewWriter(ctx)
-	if _, err = io.Copy(writer, f); err != nil {
-		return errors.Trace(err)
-	}
-	if err := writer.Close(); err != nil {
-		return errors.Trace(err)
-	}
-
-	return nil
 }

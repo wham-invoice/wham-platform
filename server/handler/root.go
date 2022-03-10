@@ -5,7 +5,6 @@
 package handler
 
 import (
-	"context"
 	"net/http"
 	"strings"
 
@@ -69,14 +68,15 @@ func Root(cfg Config) (route.Installer, error) {
 				Prereqs: unauth,
 				Installers: route.Installers(
 					Auth,
-					Invoice,
-				//	PDF,
+					ViewInvoice,
+					PDF,
 				),
 			},
 			route.Group{
 				Path:    "/",
 				Prereqs: auth,
 				Installers: route.Installers(
+					Invoice,
 					EmailInvoice,
 					NewInvoice,
 					AllInvoices,
@@ -92,7 +92,11 @@ func authorized(cfg Config) ([]gin.HandlerFunc, error) {
 		return nil, errors.Annotate(err, "bad config")
 	}
 
-	return route.Prereqs(setUpCors(cfg), SetAppDB(cfg.AppDB), user()), nil
+	return route.Prereqs(
+		sessions.Sessions("user_session", *cfg.RedisStore),
+		setUpCors(cfg),
+		SetAppDB(cfg.AppDB),
+	), nil
 }
 
 func unauthorized(cfg Config) ([]gin.HandlerFunc, error) {
@@ -100,29 +104,11 @@ func unauthorized(cfg Config) ([]gin.HandlerFunc, error) {
 		return nil, errors.Annotate(err, "bad config")
 	}
 
-	return route.Prereqs(setUpCors(cfg), SetAppDB(cfg.AppDB)), nil
-}
-
-func user() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		app := MustApp(c)
-		session := sessions.Default(c)
-		userID := session.Get(userSessionKey)
-		if userID == nil {
-			c.JSON(http.StatusNotFound, gin.H{
-				"message": "unauthorized",
-			})
-			route.Abort(c, errors.New("cannot get user ID from session"))
-		}
-
-		user, err := app.GetUser(context.Background(), userID.(string))
-		if err != nil {
-			route.Abort(c, errors.Annotate(err, "cannot get user"))
-		}
-
-		c.Set(dbUserKey, user)
-		c.Next()
-	}
+	return route.Prereqs(
+		sessions.Sessions("user_session", *cfg.RedisStore),
+		setUpCors(cfg),
+		SetAppDB(cfg.AppDB),
+	), nil
 }
 
 func setUpCors(cfg Config) gin.HandlerFunc {

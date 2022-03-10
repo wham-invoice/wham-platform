@@ -29,7 +29,7 @@ func Abort(c *gin.Context, err error) {
 		c.AbortWithStatus(terr.Status)
 
 	default:
-		//util.CLog(c).Errorf("request failed: %s", err)
+
 		c.AbortWithStatus(http.StatusInternalServerError)
 	}
 }

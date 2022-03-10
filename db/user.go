@@ -23,12 +23,13 @@ const usersCollection = "users"
 func (app *App) GetUser(ctx context.Context, id string) (*User, error) {
 	var user = new(User)
 
-	result, err := app.firestoreClient.Collection(usersCollection).Doc(id).Get(ctx)
+	result, err := app.firestoreClient.Collection(usersCollection).Doc(
+		id).Get(ctx)
 	if err != nil {
 		if status.Code(err) == codes.NotFound {
 			return nil, nil
 		}
-		return user, errors.Trace(err)
+		return user, errors.Annotatef(err, "errored getting user %s", id)
 	}
 
 	user.ID = result.Ref.ID
@@ -46,12 +47,16 @@ func (app *App) AddUser(ctx context.Context, user *User) error {
 	return errors.Trace(err)
 }
 
-func (u User) GetFullName() string {
+func (u User) FullName() string {
 	return fmt.Sprintf("%s %s", u.FirstName, u.LastName)
 }
 
 func (u User) Invoices(ctx context.Context, app *App) ([]Invoice, error) {
-	return app.GetInvoicesForUser(ctx, u.ID)
+	return app.invoicesForUser(ctx, u.ID)
+}
+
+func (u User) Contacts(ctx context.Context, app *App) ([]Contact, error) {
+	return app.contactsForUser(ctx, u.ID)
 }
 
 type UserInfo struct {
@@ -59,7 +64,7 @@ type UserInfo struct {
 	FamilyName string `json:"family_name"`
 	GivenName  string `json:"given_name"`
 	Name       string `json:"name"`
-	Sub        string `json: "sub"`
+	// Sub        string `json: "sub"`
 	// An identifier for the user,
 	// unique among all Google accounts and never reused.
 	// A Google account can have multiple email addresses at different points in time, but the sub value is never changed.
