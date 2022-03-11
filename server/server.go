@@ -14,21 +14,10 @@ import (
 	"github.com/juju/errors"
 )
 
-const user_id_gin_key = "user_id_key"
-const user_id_session_key = "user_id_session_key"
-const database_conn_gin_key = "database_connection_key"
-
 func init() {
+	// registers types used for gob encoding/decoding with the gob package.
 	gob.Register(oauth2.Token{})
 	gob.Register(db.User{})
-}
-
-// ApiMiddleware will add the db connection to the context
-func ApiMiddleware(dbApp *db.App) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.Set(database_conn_gin_key, dbApp)
-		c.Next()
-	}
 }
 
 // TODO requests need to run async.
@@ -52,12 +41,19 @@ func Run(ctx context.Context) error {
 
 func configure(ctx context.Context, cfg *handler.Config) (string, error) {
 
-	addr := "0.0.0.0:8080"
+	// TODO all this config should be in a config file.
+	serverAddr := "0.0.0.0:8080"
 
 	cfg.AllowOrigin = "http://localhost:3000"
 
 	// TODO i think 'secret' needs to be an actual secret...
-	store, err := redis.NewStore(10, "tcp", fmt.Sprintf("%s:%d", "localhost", 6379), "", []byte("secret"))
+	store, err := redis.NewStore(
+		10,
+		"tcp",
+		fmt.Sprintf("%s:%d", "localhost", 6379),
+		"",
+		[]byte("secret"),
+	)
 	if err != nil {
 		return "", errors.Annotate(err, "cannot set up redis store")
 	}
@@ -70,5 +66,5 @@ func configure(ctx context.Context, cfg *handler.Config) (string, error) {
 		return "", errors.Annotate(err, "cannot set up application DB")
 	}
 
-	return addr, nil
+	return serverAddr, nil
 }

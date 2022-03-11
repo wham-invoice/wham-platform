@@ -15,6 +15,7 @@ type App struct {
 	storageClient   *storage.Client
 }
 
+// TODO DB config should be stored in config file.
 func Init(ctx context.Context) (*App, error) {
 	var app = new(App)
 

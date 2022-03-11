@@ -9,6 +9,8 @@ import (
 	"google.golang.org/api/iterator"
 )
 
+var ContactNotFound = errors.New("contact not found")
+
 type Contact struct {
 	ID        string
 	FirstName string `firestore:"first_name"`

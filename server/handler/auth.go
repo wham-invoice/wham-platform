@@ -7,11 +7,11 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/rstorr/wham-platform/db"
 	"github.com/rstorr/wham-platform/server/route"
 	"github.com/rstorr/wham-platform/util"
 
+	"github.com/gin-gonic/gin"
 	"github.com/juju/errors"
 	"golang.org/x/oauth2"
 	"google.golang.org/api/idtoken"
@@ -19,8 +19,8 @@ import (
 
 type AuthRequest struct {
 	UID     string `json:"uid" binding:"required"`      // UID from firebase authentication
-	Code    string `json:"code" binding:"required"`     // server code from google used to get access_tokens server side
 	IdToken string `json:"id_token" binding:"required"` // ID_token used to get google user info
+	Code    string `json:"code" binding:"required"`     // server code from google used to get access_tokens server side
 }
 
 type GoogleToken struct {
@@ -36,74 +36,78 @@ var Auth = route.Endpoint{
 	Method: "POST",
 	Path:   "/auth",
 	Do: func(c *gin.Context) (interface{}, error) {
-		app := MustApp(c)
-
 		var req AuthRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return nil, errors.Annotate(err, "could not bind request")
 		}
 
-		ctx := context.Background()
-		user, err := authenticate(ctx, app, req)
+		app := MustApp(c)
+
+		user, err := authenticate(c.Request.Context(), app, req)
 		if err != nil {
 			return nil, errors.Annotate(err, "Error authenticating user")
 		}
 
-		if err = SetSession(c, user); err != nil {
+		if err = SessionSetUserID(c, user.ID); err != nil {
 			return nil, errors.Annotate(err, "Error setting session")
 		}
 
-		// NOTE pretty sure this is only removing Oauth from this func.
-		user.OAuth = oauth2.Token{}
-
-		return user, nil
+		return user.Sanitize(), nil
 	},
 }
 
-// handleAuth retrieves a User from the request and starts a session.
-// If no User exists we create one and add to DB.
+// authenticate retrieves a User from the request. If no User exists we create one and add to DB.
 func authenticate(ctx context.Context, app *db.App, req AuthRequest) (*db.User, error) {
-	user := &db.User{}
 
+	// Get info on what user is logging in
 	userInfo, err := unpackIdToken(ctx, req.IdToken)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	// see if we already have a user
+	user, err := app.User(ctx, req.UID)
 	if err != nil {
 		return user, errors.Trace(err)
 	}
 
-	// see if we already have a user
+	// if we have a user return it
+	if user != nil {
+		return user, nil
+	}
+
+	// if we don't have a user create one.
+
+	// get an oAuth token from google
+	authToken, err := tokenFromGoogle(req.Code)
+	if err != nil {
+		return user, errors.Trace(err)
+	}
+
+	// create a new user and add to DB
+	if err = app.NewUser(
+		ctx,
+		req.UID,
+		userInfo,
+		authToken,
+	); err != nil {
+		return user, errors.Trace(err)
+	}
+
+	// get new user
 	user, err = app.User(ctx, req.UID)
 	if err != nil {
 		return user, errors.Trace(err)
 	}
-	if user == nil {
 
-		authToken, err := googleExchange(req.Code)
-		if err != nil {
-			return user, errors.Trace(err)
-		}
-
-		if err = app.NewUser(
-			ctx,
-			req.UID,
-			userInfo,
-			authToken,
-		); err != nil {
-			return user, errors.Trace(err)
-		}
-
-		user, err = app.User(ctx, req.UID)
-		if err != nil {
-			return user, errors.Trace(err)
-		}
-	}
-
-	return user, errors.Trace(err)
+	return user, nil
 }
 
-// googleExchange retrieves a google access_token,id_token and other info
-// from the serverAuthCode.
-func googleExchange(serverAuthCode string) (oauth2.Token, error) {
+// tokenFromGoogle sends the serverAuthCode to google to get an oauth2 token.
+// We manually set the expiry time to be 55 mins from now. This is because the token returned from
+// google does not have the expiry set correctly.
+// TODO: this config should be moved to config file
+func tokenFromGoogle(serverAuthCode string) (oauth2.Token, error) {
 	var token oauth2.Token
 
 	v := url.Values{
@@ -136,6 +140,7 @@ func googleExchange(serverAuthCode string) (oauth2.Token, error) {
 	return token, nil
 }
 
+// unpackIdToken takes an id_token unmarshals it into a UserInfo.
 func unpackIdToken(ctx context.Context, token string) (db.UserInfo, error) {
 	var info db.UserInfo
 

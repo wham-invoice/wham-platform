@@ -42,14 +42,16 @@ type InvoiceDetail struct {
 
 const invoiceCollection = "invoices"
 
-func (app *App) AddInvoice(ctx context.Context, invoice *Invoice) error {
+func (app *App) AddInvoice(ctx context.Context, invoice *Invoice) (string, error) {
 
-	_, _, err := app.firestoreClient.Collection(invoiceCollection).Add(ctx, invoice)
+	ref, _, err := app.firestoreClient.Collection(invoiceCollection).Add(ctx, invoice)
 	if err != nil {
-		return errors.Trace(err)
+		return "", errors.Trace(err)
 	}
 
-	return nil
+	id := ref.ID
+
+	return id, nil
 }
 
 func (app *App) Invoice(ctx context.Context, id string) (*Invoice, error) {

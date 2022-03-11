@@ -32,7 +32,7 @@ type NewInvoiceRequest struct {
 var Invoice = route.Endpoint{
 	Method:  "GET",
 	Path:    "/invoice/get/:invoice_id",
-	Prereqs: route.Prereqs(InvoiceExists()),
+	Prereqs: route.Prereqs(EnsureInvoice()),
 	Do: func(c *gin.Context) (interface{}, error) {
 		invoice := MustInvoice(c)
 
@@ -45,9 +45,9 @@ var Invoice = route.Endpoint{
 var ViewInvoice = route.Endpoint{
 	Method:  "GET",
 	Path:    "/invoice/view/:invoice_id",
-	Prereqs: route.Prereqs(InvoiceExists()),
+	Prereqs: route.Prereqs(EnsureInvoice()),
 	Do: func(c *gin.Context) (interface{}, error) {
-		ctx := context.Background()
+		ctx := c.Request.Context()
 		app := MustApp(c)
 		invoice := MustInvoice(c)
 
@@ -57,11 +57,10 @@ var ViewInvoice = route.Endpoint{
 
 // TODO pagination
 var AllInvoices = route.Endpoint{
-	Method:  "GET",
-	Path:    "/invoice/getAll",
-	Prereqs: route.Prereqs(InvoiceExists()),
+	Method: "GET",
+	Path:   "/invoice/getAll",
 	Do: func(c *gin.Context) (interface{}, error) {
-		ctx := context.Background()
+		ctx := c.Request.Context()
 		app := MustApp(c)
 		user := MustUser(c)
 
@@ -74,12 +73,11 @@ var AllInvoices = route.Endpoint{
 	},
 }
 
-// NOTE: shouldn't this return the created invoice?
 var NewInvoice = route.Endpoint{
 	Method: "POST",
 	Path:   "/invoice/new",
 	Do: func(c *gin.Context) (interface{}, error) {
-		ctx := context.Background()
+		ctx := c.Request.Context()
 		app := MustApp(c)
 		user := MustUser(c)
 
@@ -89,16 +87,16 @@ var NewInvoice = route.Endpoint{
 			return nil, nil
 		}
 
-		i := invoiceFromRequest(req, user.ID)
+		newInvoice := invoiceFromRequest(req, user.ID)
 
-		contact, err := app.Contact(ctx, i.ContactID)
+		contact, err := app.Contact(ctx, newInvoice.ContactID)
 		if err != nil {
 			return nil, errors.Annotate(err, "cannot get contact ")
 		}
 
 		pdfBuilder := &pdf.Builder{
 			App:     app,
-			Invoice: i,
+			Invoice: newInvoice,
 			User:    user,
 			Contact: contact}
 		pdfID, err := pdf.CreatePDF(ctx, *pdfBuilder)
@@ -106,13 +104,19 @@ var NewInvoice = route.Endpoint{
 			return nil, errors.Annotate(err, "cannot create PDF from invoice")
 		}
 
-		i.PDFID = pdfID
+		newInvoice.PDFID = pdfID
 
-		if err := app.AddInvoice(ctx, i); err != nil {
+		id, err := app.AddInvoice(ctx, newInvoice)
+		if err != nil {
 			return nil, errors.Annotate(err, "cannot add new invoice")
 		}
 
-		return nil, nil
+		invoice, err := app.Invoice(ctx, id)
+		if err != nil {
+			return nil, errors.Annotate(err, "cannot get new invoice")
+		}
+
+		return invoice, nil
 	},
 }
 
@@ -121,7 +125,7 @@ var EmailInvoice = route.Endpoint{
 	Method: "POST",
 	Path:   "/invoice/email",
 	Do: func(c *gin.Context) (interface{}, error) {
-		ctx := context.Background()
+		ctx := c.Request.Context()
 		app := MustApp(c)
 		user := MustUser(c)
 
@@ -149,6 +153,7 @@ var EmailInvoice = route.Endpoint{
 	},
 }
 
+// TODO config should be stored in config file.
 func emailInvoice(
 	ctx context.Context,
 	invoice *db.Invoice,

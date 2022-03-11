@@ -14,6 +14,7 @@ import (
 func main() {
 	ctx := context.Background()
 
+	// TODO config file has env - set this to prod Logger depending on env
 	if err := util.SetDebugLogger(); err != nil {
 		fmt.Fprintf(os.Stderr, "%v", err)
 		os.Exit(1)

@@ -8,7 +8,7 @@ import (
 var Contact = route.Endpoint{
 	Method:  "GET",
 	Path:    "/contact/get/:contact_id",
-	Prereqs: route.Prereqs(ContactExists()),
+	Prereqs: route.Prereqs(EnsureContact()),
 	Do: func(c *gin.Context) (interface{}, error) {
 		contact := MustContact(c)
 

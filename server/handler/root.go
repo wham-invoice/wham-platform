@@ -24,6 +24,8 @@ type Config struct {
 	RedisStore  *redis.Store
 }
 
+const sessionName = "user_session"
+
 // Validate returns an error if the Config is not sensible.
 func (cfg Config) Validate() error {
 	if strings.TrimSpace(cfg.AllowOrigin) == "" {
@@ -45,15 +47,15 @@ func Root(cfg Config) (route.Installer, error) {
 		return nil, errors.Annotate(err, "cannot create authorized prereq")
 	}
 
-	unauth, err := unauthorized(cfg)
+	root, err := rootPreReqs(cfg)
 	if err != nil {
-		return nil, errors.Annotate(err, "cannot create unauthorized prereq")
+		return nil, errors.Annotate(err, "cannot create root prereq")
 	}
 
 	return route.Group{
 		Path: "/",
 		// Always handle panics, always log requests.
-		Prereqs: route.Prereqs(gin.Recovery(), gin.Logger()),
+		Prereqs: root,
 		Installers: route.Installers(
 			// Trivial "is it running" health check.
 			route.Endpoint{
@@ -64,8 +66,7 @@ func Root(cfg Config) (route.Installer, error) {
 				},
 			},
 			route.Group{
-				Path:    "/",
-				Prereqs: unauth,
+				Path: "/",
 				Installers: route.Installers(
 					Auth,
 					ViewInvoice,
@@ -87,25 +88,27 @@ func Root(cfg Config) (route.Installer, error) {
 	}, nil
 }
 
+// authorized returns a prereq that checks for a valid user.
 func authorized(cfg Config) ([]gin.HandlerFunc, error) {
 	if err := cfg.Validate(); err != nil {
 		return nil, errors.Annotate(err, "bad config")
 	}
 
 	return route.Prereqs(
-		sessions.Sessions("user_session", *cfg.RedisStore),
-		setUpCors(cfg),
-		SetAppDB(cfg.AppDB),
+		EnsureUser(),
 	), nil
 }
 
-func unauthorized(cfg Config) ([]gin.HandlerFunc, error) {
+// rootPreReqs returns the root prereqs.
+func rootPreReqs(cfg Config) ([]gin.HandlerFunc, error) {
 	if err := cfg.Validate(); err != nil {
 		return nil, errors.Annotate(err, "bad config")
 	}
 
 	return route.Prereqs(
-		sessions.Sessions("user_session", *cfg.RedisStore),
+		gin.Recovery(),
+		gin.Logger(),
+		sessions.Sessions(sessionName, *cfg.RedisStore),
 		setUpCors(cfg),
 		SetAppDB(cfg.AppDB),
 	), nil
