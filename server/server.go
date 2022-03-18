@@ -20,8 +20,6 @@ func init() {
 	gob.Register(db.User{})
 }
 
-// TODO requests need to run async.
-// TODO look at platform/service/api/main.go for reference.
 func Run(ctx context.Context) error {
 	var cfg handler.Config
 	addr, err := configure(ctx, &cfg)

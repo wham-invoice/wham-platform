@@ -31,6 +31,17 @@ type Address struct {
 
 const contactsCollection = "contacts"
 
+func (app *App) AddContact(ctx context.Context, contact *Contact) (string, error) {
+	ref, _, err := app.firestoreClient.Collection(contactsCollection).Add(ctx, contact)
+	if err != nil {
+		return "", errors.Trace(err)
+	}
+
+	id := ref.ID
+
+	return id, nil
+}
+
 func (app *App) Contact(ctx context.Context, id string) (*Contact, error) {
 	var contact = new(Contact)
 
@@ -100,4 +111,34 @@ func addressfromUserDoc(doc *firestore.DocumentSnapshot) (*Address, error) {
 
 func (c Contact) GetFullName() string {
 	return fmt.Sprintf("%s %s", c.FirstName, c.LastName)
+}
+
+func (app *App) ContactsDeleteAll(ctx context.Context, batchSize int) error {
+	for {
+		iter := app.firestoreClient.Collection(contactsCollection).Limit(batchSize).Documents(ctx)
+		numDeleted := 0
+
+		batch := app.firestoreClient.Batch()
+		for {
+			doc, err := iter.Next()
+			if err == iterator.Done {
+				break
+			}
+			if err != nil {
+				return err
+			}
+
+			batch.Delete(doc.Ref)
+			numDeleted++
+		}
+
+		if numDeleted == 0 {
+			return nil
+		}
+
+		_, err := batch.Commit(ctx)
+		if err != nil {
+			return err
+		}
+	}
 }

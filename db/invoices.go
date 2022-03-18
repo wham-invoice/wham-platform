@@ -40,11 +40,10 @@ type InvoiceDetail struct {
 	Paid        bool
 }
 
-const invoiceCollection = "invoices"
+const invoicesCollection = "invoices"
 
 func (app *App) AddInvoice(ctx context.Context, invoice *Invoice) (string, error) {
-
-	ref, _, err := app.firestoreClient.Collection(invoiceCollection).Add(ctx, invoice)
+	ref, _, err := app.firestoreClient.Collection(invoicesCollection).Add(ctx, invoice)
 	if err != nil {
 		return "", errors.Trace(err)
 	}
@@ -57,7 +56,7 @@ func (app *App) AddInvoice(ctx context.Context, invoice *Invoice) (string, error
 func (app *App) Invoice(ctx context.Context, id string) (*Invoice, error) {
 	var invoice = new(Invoice)
 
-	doc, err := app.firestoreClient.Collection(invoiceCollection).Doc(id).Get(ctx)
+	doc, err := app.firestoreClient.Collection(invoicesCollection).Doc(id).Get(ctx)
 	if status.Code(err) == codes.NotFound {
 		return invoice, InvoiceNotFound
 	}
@@ -110,7 +109,7 @@ func (i *Invoice) Detail(ctx context.Context, app *App) (*InvoiceDetail, error) 
 func (app *App) invoicesForUser(ctx context.Context, userID string) ([]Invoice, error) {
 	invoices := []Invoice{}
 
-	iter := app.firestoreClient.Collection(invoiceCollection).Where("user_id", "==", userID).Documents(ctx)
+	iter := app.firestoreClient.Collection(invoicesCollection).Where("user_id", "==", userID).Documents(ctx)
 	for {
 		var invoice = new(Invoice)
 		doc, err := iter.Next()
@@ -133,6 +132,24 @@ func (app *App) invoicesForUser(ctx context.Context, userID string) ([]Invoice, 
 	return invoices, nil
 }
 
+func (app *App) invoiceTotalsForUser(ctx context.Context, userID string) (float32, float32, error) {
+	var total, paid float32
+
+	invoices, err := app.invoicesForUser(ctx, userID)
+	if err != nil {
+		return total, paid, errors.Trace(err)
+	}
+
+	for _, invoice := range invoices {
+		total += invoice.GetTotal()
+		if invoice.Paid {
+			paid += invoice.GetTotal()
+		}
+	}
+
+	return total, paid, nil
+}
+
 func (i *Invoice) User(ctx context.Context, app *App) (*User, error) {
 	return app.User(ctx, i.UserID)
 }
@@ -152,4 +169,34 @@ func (i *Invoice) GetGST() float32 {
 
 func (i *Invoice) GetTotal() float32 {
 	return i.GetSubtotal() + i.GetGST()
+}
+
+func (app *App) InvoicesDeleteAll(ctx context.Context, batchSize int) error {
+	for {
+		iter := app.firestoreClient.Collection(invoicesCollection).Limit(batchSize).Documents(ctx)
+		numDeleted := 0
+
+		batch := app.firestoreClient.Batch()
+		for {
+			doc, err := iter.Next()
+			if err == iterator.Done {
+				break
+			}
+			if err != nil {
+				return err
+			}
+
+			batch.Delete(doc.Ref)
+			numDeleted++
+		}
+
+		if numDeleted == 0 {
+			return nil
+		}
+
+		_, err := batch.Commit(ctx)
+		if err != nil {
+			return err
+		}
+	}
 }

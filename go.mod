@@ -8,7 +8,7 @@ require (
 	github.com/gin-contrib/sessions v0.0.4
 	github.com/gin-gonic/gin v1.7.7
 	github.com/johnfercher/maroto v0.33.0
-	github.com/juju/errors v0.0.0-20210818161939-5560c4c073ff
+	github.com/juju/errors v0.0.0-20220203013757-bd733f3c86b9
 	github.com/spf13/viper v1.10.1
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
 	google.golang.org/api v0.69.0
@@ -16,8 +16,13 @@ require (
 
 require (
 	github.com/gin-contrib/cors v1.3.1 // indirect
+	github.com/juju/mgo/v2 v2.0.0-20210302023703-70d5d206e208 // indirect
+	github.com/kr/pretty v0.3.0 // indirect
+	github.com/kr/text v0.2.0 // indirect
+	github.com/rogpeppe/go-internal v1.8.0 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
+	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 )
 
 require (
@@ -44,6 +49,7 @@ require (
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/juju/loggo v0.0.0-20210728185423-eebad3a902c4
+	github.com/juju/testing v0.0.0-20220203020004-a0ff61f03494
 	github.com/jung-kurt/gofpdf v1.4.2 // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/magiconair/properties v1.8.5 // indirect

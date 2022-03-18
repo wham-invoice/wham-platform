@@ -6,6 +6,7 @@ import (
 
 	"github.com/juju/errors"
 	"golang.org/x/oauth2"
+	"google.golang.org/api/iterator"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -21,7 +22,19 @@ type User struct {
 	OAuth oauth2.Token `json:"oauth_token"`
 }
 
+type UserSummary struct {
+	InvoiceTotal float32 `json:"invoice_total"`
+	InvoicePaid  float32 `json:"invoice_paid"`
+}
+
 const usersCollection = "users"
+
+func (app *App) AddUser(ctx context.Context, user *User) error {
+	_, err := app.firestoreClient.Collection(usersCollection).Doc(
+		user.ID).Set(ctx, user)
+
+	return errors.Trace(err)
+}
 
 func (app *App) User(ctx context.Context, id string) (*User, error) {
 	var user = new(User)
@@ -43,13 +56,6 @@ func (app *App) User(ctx context.Context, id string) (*User, error) {
 	return user, nil
 }
 
-func (app *App) AddUser(ctx context.Context, user *User) error {
-	_, err := app.firestoreClient.Collection(usersCollection).Doc(
-		user.ID).Set(ctx, user)
-
-	return errors.Trace(err)
-}
-
 func (u User) FullName() string {
 	return fmt.Sprintf("%s %s", u.FirstName, u.LastName)
 }
@@ -60,6 +66,19 @@ func (u User) Invoices(ctx context.Context, app *App) ([]Invoice, error) {
 
 func (u User) Contacts(ctx context.Context, app *App) ([]Contact, error) {
 	return app.contactsForUser(ctx, u.ID)
+}
+
+func (u User) Summary(ctx context.Context, app *App) (UserSummary, error) {
+	var summary UserSummary
+	total, paid, err := app.invoiceTotalsForUser(ctx, u.ID)
+	if err != nil {
+		return summary, errors.Trace(err)
+	}
+
+	summary.InvoiceTotal = total
+	summary.InvoicePaid = paid
+
+	return summary, nil
 }
 
 // Santize returns a copy of the user with sensitive info removed.
@@ -91,4 +110,34 @@ func (app *App) NewUser(
 		OAuth:     authToken,
 	}
 	return app.AddUser(ctx, user)
+}
+
+func (app *App) UsersDeleteAll(ctx context.Context, batchSize int) error {
+	for {
+		iter := app.firestoreClient.Collection(usersCollection).Limit(batchSize).Documents(ctx)
+		numDeleted := 0
+
+		batch := app.firestoreClient.Batch()
+		for {
+			doc, err := iter.Next()
+			if err == iterator.Done {
+				break
+			}
+			if err != nil {
+				return err
+			}
+
+			batch.Delete(doc.Ref)
+			numDeleted++
+		}
+
+		if numDeleted == 0 {
+			return nil
+		}
+
+		_, err := batch.Commit(ctx)
+		if err != nil {
+			return err
+		}
+	}
 }

@@ -31,7 +31,6 @@ type GoogleToken struct {
 	IdToken      string `json:"id_token"`
 }
 
-// TODO we need to keep an eye on oauth2 expiries and refresh tokens when necessary.
 var Auth = route.Endpoint{
 	Method: "POST",
 	Path:   "/auth",

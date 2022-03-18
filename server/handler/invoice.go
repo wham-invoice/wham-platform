@@ -56,9 +56,9 @@ var ViewInvoice = route.Endpoint{
 }
 
 // TODO pagination
-var AllInvoices = route.Endpoint{
+var UserInvoices = route.Endpoint{
 	Method: "GET",
-	Path:   "/invoice/getAll",
+	Path:   "/user/invoices",
 	Do: func(c *gin.Context) (interface{}, error) {
 		ctx := c.Request.Context()
 		app := MustApp(c)
@@ -131,7 +131,7 @@ var EmailInvoice = route.Endpoint{
 
 		var req EmailInvoiceRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			c.AbortWithError(http.StatusBadRequest, errors.Annotate(err, "cannot bind request"))
 			return nil, nil
 		}
 
