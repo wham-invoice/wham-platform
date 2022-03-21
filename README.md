@@ -1,6 +1,6 @@
 # Wham Platform
 
-This project is Work In Progress.
+### Work In Progress
 
 Platform is responsible for handling requests from the flutter mobile app and svelte web app.
 
@@ -20,3 +20,5 @@ Start the platform
 # Tests
 
 `go test ./...`
+
+# Roadmap
