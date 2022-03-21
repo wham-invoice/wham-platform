@@ -65,11 +65,11 @@ func (app *App) Invoice(ctx context.Context, id string) (*Invoice, error) {
 		return invoice, errors.Trace(err)
 	}
 
-	invoice.ID = doc.Ref.ID
-
 	if err := doc.DataTo(&invoice); err != nil {
 		return invoice, errors.Trace(err)
 	}
+
+	invoice.ID = doc.Ref.ID
 
 	return invoice, nil
 }

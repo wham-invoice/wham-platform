@@ -15,6 +15,7 @@ const (
 	dbContactKey   = "server:contact"
 	dbUserKey      = "server:user"
 	userSessionKey = "session:user"
+	sessionKey     = "interface:session"
 )
 
 func SessionSetUserID(c *gin.Context, id string) error {
@@ -37,10 +38,6 @@ func SetAppDB(appDB *db.App) gin.HandlerFunc {
 	return func(c *gin.Context) { c.Set(dbAppKey, appDB) }
 }
 
-func SetUser(c *gin.Context, user *db.User) gin.HandlerFunc {
-	return func(c *gin.Context) { c.Set(dbUserKey, user) }
-}
-
 // MustApp returns the application database or panics.
 func MustApp(c *gin.Context) *db.App {
 	return c.MustGet(dbAppKey).(*db.App)
@@ -60,28 +57,28 @@ func MustContact(c *gin.Context) *db.Contact {
 	return c.MustGet(dbContactKey).(*db.Contact)
 }
 
-// EnsureUser returns middleware that extracts the user_id from the session and sets the corresponding user in the context.
+// SetSession returns middleware that stores the session interface in the gin context.
+func SetSession(session Session) gin.HandlerFunc {
+	return func(c *gin.Context) { c.Set(sessionKey, session) }
+}
+
+// MustSession returns the session interface or panics.
+func MustSession(c *gin.Context) Session {
+	return c.Value(sessionKey).(Session)
+}
+
+// EnsureUser returns middleware that extracts the user_id from the session
+// and sets the corresponding user in the context.
 func EnsureUser() gin.HandlerFunc {
-	getUser := func(c *gin.Context) (*db.User, error) {
-		userID := SessionGetUserID(c)
-		if userID == "" {
-			return nil, route.NotFound
-		}
-
-		user, err := MustApp(c).User(context.Background(), userID)
-		if err == db.UserNotFound {
-			return nil, route.NotFound
-		}
-
-		return user, nil
-	}
-
 	return func(c *gin.Context) {
-		user, err := getUser(c)
+		session := MustSession(c)
+		app := MustApp(c)
+
+		user, err := session.GetUser(c, app)
 		if err != nil {
 			route.Abort(c, err)
 		} else {
-			SetUser(c, user)
+			c.Set(dbUserKey, *user)
 		}
 	}
 }
@@ -111,7 +108,7 @@ func EnsureInvoice() gin.HandlerFunc {
 		if err != nil {
 			route.Abort(c, err)
 		} else {
-			c.Set(dbInvoiceKey, invoice)
+			c.Set(dbInvoiceKey, *invoice)
 		}
 	}
 }

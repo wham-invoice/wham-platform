@@ -2,6 +2,7 @@ package handler_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/rstorr/wham-platform/db"
@@ -13,62 +14,78 @@ import (
 type invoicesSuite struct {
 	APISuiteCore
 
-	invoice *db.Invoice
+	user *db.User
 }
 
 var _ = gc.Suite(&invoicesSuite{})
 
 func (s *invoicesSuite) SetUpTest(c *gc.C) {
-	ctx := context.Background()
 	s.APISuiteCore.SetUpTest(c)
 
-	s.invoice = s.AddInvoice(ctx, c)
+	s.user = s.AddUser(context.Background(), c)
 }
 
 func (s *invoicesSuite) TestInvoices(c *gc.C) {
+	invoice1 := s.AddInvoice(c, s.user.ID)
+	_ = s.AddInvoice(c, s.user.ID)
 
 	body := s.Get200(c, "/user/invoices")
 	c.Check(body, jc.JSONEquals, map[string]interface{}{
-		"contacts": []interface{}{
+		"invoices": []interface{}{
 			map[string]interface{}{
-				"id": s.invoice.ID,
+				"id": invoice1.ID,
 			},
 		},
 	})
 }
 
 func (s *invoicesSuite) TestInvoice(c *gc.C) {
-
-	body := s.Get200(c, fmt.Sprintf("/invoice/get/", s.invoice.ID))
+	invoice := s.AddInvoice(c, s.user.ID)
+	body := s.Get200(c, fmt.Sprintf("/invoice/get/%s", invoice.ID))
 	c.Check(body, jc.JSONEquals, map[string]interface{}{
-		"contacts": []interface{}{
+		"invoices": []interface{}{
 			map[string]interface{}{
-				"id": s.invoice.ID,
+				"id": invoice.ID,
 			},
 		},
 	})
 }
 
 func (s *invoicesSuite) TestInvoiceEmail(c *gc.C) {
-	s.Post200(c, "/invoice/email")
+	invoice := s.AddInvoice(c, s.user.ID)
+
+	payload, err := json.Marshal(map[string]interface{}{
+		"invoice_id": invoice.ID,
+	})
+	c.Assert(err, jc.ErrorIsNil)
+
+	s.Post204(c, "/invoice/email", string(payload))
 }
 
 func (s *invoicesSuite) TestInvoiceEmail400(c *gc.C) {
-	s.Post400(c, "/invoice/email")
+	invoice := s.AddInvoice(c, s.user.ID)
+
+	payload, err := json.Marshal(map[string]interface{}{
+		"invoice_id": invoice.ID,
+	})
+	c.Assert(err, jc.ErrorIsNil)
+
+	// TODO 400 ?
+	s.Post400(c, "/invoice/email", string(payload))
 }
 
-func (s *invoicesSuite) TestInvoiceNew(c *gc.C) {
-	s.Post200(c, "/invoice/new")
-}
+// func (s *invoicesSuite) TestInvoiceNew(c *gc.C) {
+// 	s.Post200(c, "/invoice/new")
+// }
 
-func (s *invoicesSuite) TestInvoiceNew400(c *gc.C) {
-	s.Post400(c, "/invoice/new")
-}
+// func (s *invoicesSuite) TestInvoiceNew400(c *gc.C) {
+// 	s.Post400(c, "/invoice/new")
+// }
 
-func (s *invoicesSuite) TestViewInvoice(c *gc.C) {
-	s.Get200(c, fmt.Sprintf("/invoice/view/:%s", s.invoice.ID))
-}
+// func (s *invoicesSuite) TestViewInvoice(c *gc.C) {
+// 	s.Get200(c, fmt.Sprintf("/invoice/view/:%s", s.invoice.ID))
+// }
 
-func (s *invoicesSuite) TestUserInvoice(c *gc.C) {
-	s.Get200(c, "/user/invoices")
-}
+// func (s *invoicesSuite) TestUserInvoice(c *gc.C) {
+// 	s.Get200(c, "/user/invoices")
+// }

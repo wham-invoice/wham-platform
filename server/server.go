@@ -57,6 +57,8 @@ func configure(ctx context.Context, cfg *handler.Config) (string, error) {
 	}
 	cfg.RedisStore = &store
 
+	cfg.Session = &handler.RealSession{}
+
 	// Set this up last, once everything else looks like it worked.
 	// Don't bother to close, it should live as long as the process anyway.
 	cfg.AppDB, err = db.Init(ctx)

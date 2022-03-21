@@ -17,11 +17,19 @@ import (
 	"github.com/rstorr/wham-platform/server/route"
 )
 
+type Session interface {
+	GetUser(
+		c *gin.Context,
+		app *db.App,
+	) (*db.User, error)
+}
+
 // Config configures an api server.
 type Config struct {
 	AllowOrigin string
 	AppDB       *db.App
 	RedisStore  *redis.Store
+	Session     Session
 }
 
 const sessionName = "user_session"
@@ -34,6 +42,10 @@ func (cfg Config) Validate() error {
 
 	if cfg.AppDB == nil {
 		return errors.New("missing AppDB")
+	}
+
+	if cfg.Session == nil {
+		return errors.New("missing Session")
 	}
 
 	return nil
@@ -83,6 +95,7 @@ func Root(cfg Config) (route.Installer, error) {
 					UserInvoices,
 					Contact,
 					UserContacts,
+					NewContact,
 				),
 			},
 		),
@@ -96,6 +109,7 @@ func authorized(cfg Config) ([]gin.HandlerFunc, error) {
 	}
 
 	return route.Prereqs(
+		SetSession(cfg.Session),
 		EnsureUser(),
 	), nil
 }

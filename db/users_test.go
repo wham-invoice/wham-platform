@@ -21,5 +21,5 @@ func (s *UsersSuite) TestUsersInsertAndGet(c *gc.C) {
 
 	getInvoice, err := s.App.User(ctx, u.ID)
 	c.Assert(err, jc.ErrorIsNil)
-	c.Check(u, jc.DeepEquals, getInvoice)
+	c.Check(getInvoice, jc.DeepEquals, u)
 }

@@ -19,7 +19,7 @@ func (s *ContactsSuite) TestContactInsertAndGet(c *gc.C) {
 	ctx := context.Background()
 	contact := s.AddContact(ctx, c)
 
-	getInvoice, err := s.App.Contact(ctx, contact.ID)
+	getContact, err := s.App.Contact(ctx, contact.ID)
 	c.Assert(err, jc.ErrorIsNil)
-	c.Check(contact, jc.DeepEquals, getInvoice)
+	c.Check(getContact, jc.DeepEquals, contact)
 }

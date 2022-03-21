@@ -2,17 +2,20 @@ package handler_test
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 
+	"github.com/gin-contrib/sessions/redis"
 	"github.com/gin-gonic/gin"
 	"github.com/rstorr/wham-platform/db"
 	"github.com/rstorr/wham-platform/server/handler"
 	"github.com/rstorr/wham-platform/tests/setup"
 
+	"github.com/juju/errors"
 	jc "github.com/juju/testing/checkers"
 	gc "gopkg.in/check.v1"
 )
@@ -24,12 +27,34 @@ type APISuiteCore struct {
 	user *db.User
 }
 
+func (s APISuiteCore) GetUser(
+	c *gin.Context,
+	app *db.App,
+) (*db.User, error) {
+	if s.user == nil {
+		return nil, errors.New("no user")
+	}
+
+	return s.user, nil
+}
+
 func (s *APISuiteCore) SetUpSuite(c *gc.C) {
 	s.ApplicationSuiteCore.SetUpSuite(c)
+
+	store, err := redis.NewStore(
+		10,
+		"tcp",
+		fmt.Sprintf("%s:%d", "localhost", 6379),
+		"",
+		[]byte("secret"),
+	)
+	c.Assert(err, jc.ErrorIsNil)
 
 	root, err := handler.Root(handler.Config{
 		AllowOrigin: "http://test.origin",
 		AppDB:       s.App,
+		RedisStore:  &store,
+		Session:     s,
 	})
 	c.Assert(err, jc.ErrorIsNil)
 
@@ -42,26 +67,6 @@ func (s *APISuiteCore) SetUpTest(c *gc.C) {
 	s.ApplicationSuiteCore.SetUpTest(c)
 
 	s.user = s.AddUser(context.Background(), c)
-}
-
-// EnsureDBUser is part of the handler.Github interface.
-func (s *APISuiteCore) EnsureDBUser(
-	ctx context.Context,
-	app *db.App,
-) (*db.User, error) {
-	if s.user != nil {
-		return s.user, nil
-	}
-	panic("oh no EnsureDBUser: s.user is nil")
-}
-
-// RequestOAuthToken is part of the handler.Github interface.
-func (s *APISuiteCore) RequestOAuthToken(
-	tempCode,
-	state string,
-) (string, error) {
-	// RequestOAuthToken sends tempcode and state to GH and receives the users oauth token.
-	return "itstokentime", nil
 }
 
 func (s *APISuiteCore) Serve(req *http.Request) *http.Response {

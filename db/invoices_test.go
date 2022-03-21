@@ -3,6 +3,7 @@ package db_test
 import (
 	"context"
 
+	"github.com/rstorr/wham-platform/db"
 	"github.com/rstorr/wham-platform/tests/setup"
 
 	jc "github.com/juju/testing/checkers"
@@ -11,15 +12,21 @@ import (
 
 type InvoicesSuite struct {
 	setup.ApplicationSuiteCore
+
+	user *db.User
 }
 
 var _ = gc.Suite(&InvoicesSuite{})
 
-func (s *InvoicesSuite) TestInvoiceInsertAndGet(c *gc.C) {
-	ctx := context.Background()
-	inv := s.AddInvoice(ctx, c)
+func (s *InvoicesSuite) SetUpTest(c *gc.C) {
 
-	getInvoice, err := s.App.Invoice(ctx, inv.ID)
+	s.user = s.AddUser(context.Background(), c)
+}
+
+func (s *InvoicesSuite) TestInvoiceInsertAndGet(c *gc.C) {
+	inv := s.AddInvoice(c, s.user.ID)
+
+	getInvoice, err := s.App.Invoice(context.Background(), inv.ID)
 	c.Assert(err, jc.ErrorIsNil)
-	c.Check(inv, jc.DeepEquals, getInvoice)
+	c.Check(getInvoice, jc.DeepEquals, inv)
 }

@@ -35,14 +35,14 @@ var Auth = route.Endpoint{
 	Method: "POST",
 	Path:   "/auth",
 	Do: func(c *gin.Context) (interface{}, error) {
+		app := MustApp(c)
+
 		var req AuthRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			return nil, errors.Annotate(err, "could not bind request")
 		}
 
-		app := MustApp(c)
-
-		user, err := authenticate(c.Request.Context(), app, req)
+		user, err := getUser(c.Request.Context(), app, req)
 		if err != nil {
 			return nil, errors.Annotate(err, "Error authenticating user")
 		}
@@ -55,8 +55,8 @@ var Auth = route.Endpoint{
 	},
 }
 
-// authenticate retrieves a User from the request. If no User exists we create one and add to DB.
-func authenticate(ctx context.Context, app *db.App, req AuthRequest) (*db.User, error) {
+// getUser retrieves a User from the request. If no User exists we create one and add to DB.
+func getUser(ctx context.Context, app *db.App, req AuthRequest) (*db.User, error) {
 
 	// Get info on what user is logging in
 	userInfo, err := unpackIdToken(ctx, req.IdToken)
