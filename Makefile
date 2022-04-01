@@ -6,5 +6,5 @@ REPOSITORY := platform
 
 
 build-push-image:
-	docker build -t $(REGISTRY)/$(PROJECT_ID)/$(REPOSITORY)/image:$(TAG) .
-	docker push $(REGISTRY)/$(PROJECT_ID)/$(REPOSITORY)/image:$(TAG)
+	docker build -t $(REGISTRY)/$(PROJECT_ID)/$(REPOSITORY)/$(TAG) .
+	docker push $(REGISTRY)/$(PROJECT_ID)/$(REPOSITORY)/$(TAG)
