@@ -9,7 +9,7 @@ WORKDIR /platform
 
 RUN go mod download
 
-RUN go build -o /platform
+RUN go build -o /platform -buildvcs=false
 
 # deploy stage
 FROM gcr.io/distroless/base-debian10
