@@ -4,13 +4,10 @@
 # build stage
 FROM golang:1.18-alpine as build
 
-WORKDIR /app
+COPY . /platform
+WORKDIR /platform
 
-COPY go.mod ./
-COPY go.sum ./
 RUN go mod download
-
-COPY *.go ./
 
 RUN go build -o /platform
 
