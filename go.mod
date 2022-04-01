@@ -5,6 +5,7 @@ go 1.17
 require (
 	cloud.google.com/go/firestore v1.6.1
 	firebase.google.com/go/v4 v4.7.1
+	github.com/gin-contrib/cors v1.3.1
 	github.com/gin-contrib/sessions v0.0.4
 	github.com/gin-gonic/gin v1.7.7
 	github.com/johnfercher/maroto v0.33.0
@@ -12,17 +13,16 @@ require (
 	github.com/spf13/viper v1.10.1
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
 	google.golang.org/api v0.69.0
+	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c
 )
 
 require (
-	github.com/gin-contrib/cors v1.3.1 // indirect
 	github.com/juju/mgo/v2 v2.0.0-20210302023703-70d5d206e208 // indirect
 	github.com/kr/pretty v0.3.0 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/rogpeppe/go-internal v1.8.0 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
-	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 )
 
 require (
@@ -59,7 +59,7 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/pelletier/go-toml v1.9.4 // indirect
 	github.com/ruudk/golang-pdf417 v0.0.0-20181029194003-1af4ab5afa58 // indirect
-	github.com/satori/go.uuid v1.2.0 // indirect
+	github.com/satori/go.uuid v1.2.0
 	github.com/spf13/afero v1.6.0 // indirect
 	github.com/spf13/cast v1.4.1 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
@@ -69,15 +69,13 @@ require (
 	go.opencensus.io v0.23.0 // indirect
 	go.uber.org/zap v1.21.0
 	golang.org/x/crypto v0.0.0-20220214200702-86341886e292 // indirect
-	golang.org/x/mod v0.5.1 // indirect
 	golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd // indirect
 	golang.org/x/sys v0.0.0-20220209214540-3681064d5158 // indirect
 	golang.org/x/text v0.3.7 // indirect
-	golang.org/x/tools v0.1.9 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20220217155828-d576998c0009 // indirect
-	google.golang.org/grpc v1.44.0 // indirect
+	google.golang.org/grpc v1.44.0
 	google.golang.org/protobuf v1.27.1 // indirect
 	gopkg.in/ini.v1 v1.66.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
