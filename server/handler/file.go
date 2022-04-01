@@ -9,11 +9,11 @@ import (
 	"github.com/rstorr/wham-platform/server/route"
 )
 
+// PDF returns the invoice pdf file by id
 var PDF = route.Endpoint{
 	Method: "GET",
 	Path:   "/pdf/:pdf_id",
 	Do: func(c *gin.Context) (interface{}, error) {
-		// TODO grab file from db. Store in memory/disk? on server. then return it?
 
 		app := MustApp(c)
 
@@ -30,6 +30,8 @@ var PDF = route.Endpoint{
 			return nil, errors.Trace(err)
 		}
 
+		// ISTM we're pulling the pdf body into memory then sending to the client.
+		// TODO what happens to PDF after we've sent it?
 		cType := http.DetectContentType(body)
 		c.Header("Access-Control-Expose-Headers", "Content-Disposition")
 		c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s.pdf", fileName))

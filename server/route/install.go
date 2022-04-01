@@ -56,7 +56,7 @@ func (ep Endpoint) Install(rg *gin.RouterGroup) {
 	rg.Handle(ep.Method, ep.Path, handlers...)
 
 	// If we've already got OPTIONS handled, don't worry; assume it was another
-	// Endpoint with a differen method that set up the handler.
+	// Endpoint with a different method that set up the handler.
 	defer func() { recover() }()
 	rg.Handle("OPTIONS", ep.Path, func(c *gin.Context) {
 		c.AbortWithStatus(http.StatusNoContent)

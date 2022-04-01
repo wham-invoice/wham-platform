@@ -7,6 +7,8 @@ import (
 	"cloud.google.com/go/firestore"
 	"github.com/juju/errors"
 	"google.golang.org/api/iterator"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 var ContactNotFound = errors.New("contact not found")
@@ -62,6 +64,16 @@ func (app *App) Contact(ctx context.Context, id string) (*Contact, error) {
 	contact.ID = result.Ref.ID
 
 	return contact, nil
+}
+
+// TODO: test
+func (c *Contact) Delete(ctx context.Context, app *App) error {
+	_, err := app.firestoreClient.Collection(contactsCollection).Doc(c.ID).Delete(ctx)
+	if status.Code(err) == codes.NotFound {
+		return ContactNotFound
+	}
+
+	return errors.Trace(err)
 }
 
 func (app *App) contactsForUser(ctx context.Context, userID string) ([]Contact, error) {

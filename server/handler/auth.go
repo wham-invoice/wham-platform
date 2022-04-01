@@ -31,6 +31,7 @@ type GoogleToken struct {
 	IdToken      string `json:"id_token"`
 }
 
+// Auth fetches or creates a user in the firestore DB. This user is then stored in the session.
 var Auth = route.Endpoint{
 	Method: "POST",
 	Path:   "/auth",

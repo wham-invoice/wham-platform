@@ -10,6 +10,7 @@ import (
 
 type RealSession struct{}
 
+// GetUser returns the user from the session.
 func (RealSession) GetUser(
 	c *gin.Context,
 	app *db.App,

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"errors"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
@@ -18,6 +19,7 @@ const (
 	sessionKey     = "interface:session"
 )
 
+// TODO do multiple sessions work?
 func SessionSetUserID(c *gin.Context, id string) error {
 	session := sessions.Default(c)
 	session.Set(userSessionKey, id)
@@ -91,7 +93,7 @@ func EnsureInvoice() gin.HandlerFunc {
 			ID string `uri:"invoice_id" binding:"required"`
 		}
 		if c.ShouldBindUri(&req); req.ID == "" {
-			return nil, route.NotFound
+			return nil, errors.New("invoice_id is required")
 		}
 		app := MustApp(c)
 
@@ -108,7 +110,7 @@ func EnsureInvoice() gin.HandlerFunc {
 		if err != nil {
 			route.Abort(c, err)
 		} else {
-			c.Set(dbInvoiceKey, *invoice)
+			c.Set(dbInvoiceKey, invoice)
 		}
 	}
 }
@@ -121,7 +123,7 @@ func EnsureContact() gin.HandlerFunc {
 			ID string `uri:"contact_id" binding:"required"`
 		}
 		if c.ShouldBindUri(&req); req.ID == "" {
-			return nil, route.NotFound
+			return nil, errors.New("contact_id is required")
 		}
 
 		app := MustApp(c)

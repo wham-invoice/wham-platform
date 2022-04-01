@@ -13,18 +13,18 @@ import (
 var InvoiceNotFound = errors.New("invoice not found")
 
 type Invoice struct {
-	ID          string
-	UserID      string    `firestore:"user_id"`
-	ContactID   string    `firestore:"contact_id"`
-	PDFID       string    `firestore:"pdf_id"`
-	Number      int       `firestore:"number"`
-	Rate        float32   `firestore:"rate"`
-	Hours       float32   `firestore:"hours"`
-	Description string    `firestore:"description"`
-	IssueDate   time.Time `firestore:"issue_date"`
-	DueDate     time.Time `firestore:"due_date"`
-	Paid        bool      `firestore:"paid"`
-	URLCode     string    `firestore:"url_code"`
+	ID          string    `json:"id"`
+	UserID      string    `firestore:"user_id" json:"user_id"`
+	ContactID   string    `firestore:"contact_id" json:"contact_id"`
+	PDFID       string    `firestore:"pdf_id" json:"pdf_id"`
+	Number      int       `firestore:"number" json:"number"`
+	Rate        float32   `firestore:"rate" json:"rate"`
+	Hours       float32   `firestore:"hours" json:"hours"`
+	Description string    `firestore:"description" json:"description"`
+	IssueDate   time.Time `firestore:"issue_date" json:"issue_date"`
+	DueDate     time.Time `firestore:"due_date" json:"due_date"`
+	Paid        bool      `firestore:"paid" json:"paid"`
+	URLCode     string    `firestore:"url_code" json:"url_code"`
 }
 
 type InvoiceDetail struct {
@@ -74,18 +74,23 @@ func (app *App) Invoice(ctx context.Context, id string) (*Invoice, error) {
 	return invoice, nil
 }
 
+func (i *Invoice) Delete(ctx context.Context, app *App) error {
+	_, err := app.firestoreClient.Collection(invoicesCollection).Doc(i.ID).Delete(ctx)
+	if status.Code(err) == codes.NotFound {
+		return InvoiceNotFound
+	}
+
+	return errors.Trace(err)
+}
+
 func (i *Invoice) Detail(ctx context.Context, app *App) (*InvoiceDetail, error) {
 	user, err := i.User(ctx, app)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
 	// user without oauth token.
-	userSafe := &User{
-		ID:        user.ID,
-		FirstName: user.FirstName,
-		LastName:  user.LastName,
-		Email:     user.Email,
-	}
+
+	userSafe := user.Sanitize()
 
 	contact, err := i.Contact(ctx, app)
 	if err != nil {
@@ -94,7 +99,7 @@ func (i *Invoice) Detail(ctx context.Context, app *App) (*InvoiceDetail, error) 
 
 	return &InvoiceDetail{
 		PDFID:       i.PDFID,
-		User:        userSafe,
+		User:        &userSafe,
 		Contact:     contact,
 		Number:      i.Number,
 		Rate:        i.Rate,
@@ -120,11 +125,11 @@ func (app *App) invoicesForUser(ctx context.Context, userID string) ([]Invoice, 
 			return invoices, err
 		}
 
-		invoice.ID = doc.Ref.ID
-
 		if err := doc.DataTo(&invoice); err != nil {
 			return invoices, errors.Trace(err)
 		}
+
+		invoice.ID = doc.Ref.ID
 
 		invoices = append(invoices, *invoice)
 	}

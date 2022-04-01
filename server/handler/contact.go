@@ -1,8 +1,6 @@
 package handler
 
 import (
-	"net/http"
-
 	"github.com/rstorr/wham-platform/db"
 	"github.com/rstorr/wham-platform/server/route"
 
@@ -15,14 +13,15 @@ type NewContactRequest struct {
 	LastName          string `json:"last_name" binding:"required"`
 	Phone             string `json:"phone" binding:"required"`
 	Email             string `json:"email" binding:"required"`
-	Company           string `json:"company" binding:"required"`
-	AddressFirstLine  string `json:"address_first_line" binding:"required"`
-	AddressSecondLine string `json:"address_second_line" binding:"required"`
-	Suburb            string `json:"suburb" binding:"required"`
-	Postcode          string `json:"postcode" binding:"required"`
-	Country           string `json:"country" binding:"required"`
+	Company           string `json:"company"`
+	AddressFirstLine  string `json:"address_first_line"`
+	AddressSecondLine string `json:"address_second_line"`
+	Suburb            string `json:"suburb"`
+	Postcode          string `json:"postcode"`
+	Country           string `json:"country"`
 }
 
+// Contact returns a contact by ID.
 var Contact = route.Endpoint{
 	Method:  "GET",
 	Path:    "/contact/get/:contact_id",
@@ -34,6 +33,7 @@ var Contact = route.Endpoint{
 	},
 }
 
+// UserContacts returns all contacts for a user.
 var UserContacts = route.Endpoint{
 	Method: "GET",
 	Path:   "/user/contacts",
@@ -48,6 +48,25 @@ var UserContacts = route.Endpoint{
 	},
 }
 
+// DeleteContact deletes a contact by ID.
+var DeleteContact = route.Endpoint{
+	Method:  "DELETE",
+	Path:    "/contact/delete/:contact_id",
+	Prereqs: route.Prereqs(EnsureContact()),
+	Do: func(c *gin.Context) (interface{}, error) {
+		ctx := c.Request.Context()
+		app := MustApp(c)
+		contact := MustContact(c)
+
+		if err := contact.Delete(ctx, app); err != nil {
+			return nil, errors.Trace(err)
+		}
+
+		return nil, nil
+	},
+}
+
+// NewContact creates a new contact for the user.
 var NewContact = route.Endpoint{
 	Method: "POST",
 	Path:   "/contact/new",
@@ -58,8 +77,7 @@ var NewContact = route.Endpoint{
 
 		var req NewContactRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
-			c.AbortWithError(http.StatusBadRequest, errors.Annotate(err, "cannot bind request"))
-			return nil, nil
+			return nil, errors.Annotate(err, "cannot bind request")
 		}
 
 		newContact := contactFromRequest(req, user.ID)
@@ -78,8 +96,10 @@ var NewContact = route.Endpoint{
 	},
 }
 
-func contactFromRequest(req NewContactRequest, userID string) *db.Contact {
-
+func contactFromRequest(
+	req NewContactRequest,
+	userID string,
+) *db.Contact {
 	return &db.Contact{
 		UserID:    userID,
 		FirstName: req.FirstName,

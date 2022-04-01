@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wham-platform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wham-platform
+  template:
+    metadata:
+      labels:
+        app: wham-platform
+    spec:
+      containers:
+      - name: wham-platform-container
+        image: # TODO set this 
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 8080

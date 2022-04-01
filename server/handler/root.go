@@ -77,6 +77,7 @@ func Root(cfg Config) (route.Installer, error) {
 					return nil, nil
 				},
 			},
+			// paths that don't require auth.
 			route.Group{
 				Path: "/",
 				Installers: route.Installers(
@@ -85,6 +86,7 @@ func Root(cfg Config) (route.Installer, error) {
 					PDF,
 				),
 			},
+			// paths that require auth.
 			route.Group{
 				Path:    "/",
 				Prereqs: auth,
@@ -92,10 +94,13 @@ func Root(cfg Config) (route.Installer, error) {
 					Invoice,
 					EmailInvoice,
 					NewInvoice,
+					DeleteInvoice,
 					UserInvoices,
 					Contact,
 					UserContacts,
 					NewContact,
+					DeleteContact,
+					UserSummary,
 				),
 			},
 		),
