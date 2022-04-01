@@ -3,7 +3,7 @@ package db_test
 import (
 	"context"
 
-	"github.com/rstorr/wham-platform/tests/setup"
+	"github.com/wham-invoice/wham-platform/tests/setup"
 
 	jc "github.com/juju/testing/checkers"
 	gc "gopkg.in/check.v1"

@@ -7,9 +7,9 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/rstorr/wham-platform/db"
-	"github.com/rstorr/wham-platform/server/route"
-	"github.com/rstorr/wham-platform/util"
+	"github.com/wham-invoice/wham-platform/db"
+	"github.com/wham-invoice/wham-platform/server/route"
+	"github.com/wham-invoice/wham-platform/util"
 
 	"github.com/gin-gonic/gin"
 	"github.com/juju/errors"

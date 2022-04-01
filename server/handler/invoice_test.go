@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/rstorr/wham-platform/db"
+	"github.com/wham-invoice/wham-platform/db"
 
 	jc "github.com/juju/testing/checkers"
 	gc "gopkg.in/check.v1"

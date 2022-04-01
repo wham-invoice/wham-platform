@@ -3,7 +3,7 @@ package handler
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/juju/errors"
-	"github.com/rstorr/wham-platform/server/route"
+	"github.com/wham-invoice/wham-platform/server/route"
 )
 
 // UserSummary returns total invoice amount and paid amount for the user.

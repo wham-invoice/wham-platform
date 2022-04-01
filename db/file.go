@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/juju/errors"
-	"github.com/rstorr/wham-platform/util"
+	"github.com/wham-invoice/wham-platform/util"
 )
 
 func (app *App) StorePDF(ctx context.Context, fileName, filePath string) error {

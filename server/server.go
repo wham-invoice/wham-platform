@@ -5,8 +5,8 @@ import (
 	"encoding/gob"
 	"fmt"
 
-	"github.com/rstorr/wham-platform/db"
-	"github.com/rstorr/wham-platform/server/handler"
+	"github.com/wham-invoice/wham-platform/db"
+	"github.com/wham-invoice/wham-platform/server/handler"
 	"golang.org/x/oauth2"
 
 	"github.com/gin-contrib/sessions/redis"

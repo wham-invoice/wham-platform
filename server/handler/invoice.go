@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/rstorr/wham-platform/db"
-	"github.com/rstorr/wham-platform/email"
-	"github.com/rstorr/wham-platform/pdf"
-	"github.com/rstorr/wham-platform/server/route"
+	"github.com/wham-invoice/wham-platform/db"
+	"github.com/wham-invoice/wham-platform/email"
+	"github.com/wham-invoice/wham-platform/pdf"
+	"github.com/wham-invoice/wham-platform/server/route"
 
 	"github.com/juju/errors"
 	"golang.org/x/oauth2/google"
@@ -187,7 +187,7 @@ func emailInvoice(
 	user *db.User,
 	contact *db.Contact,
 ) error {
-	b, err := ioutil.ReadFile("/Users/work/go/src/github.com/rstorr/wham-platform/secrets/google_web_client_credentials.json")
+	b, err := ioutil.ReadFile("/Users/work/go/src/github.com/wham-invoice/wham-platform/secrets/google_web_client_credentials.json")
 	if err != nil {
 		return errors.Trace(err)
 	}

@@ -10,9 +10,9 @@ import (
 	"github.com/johnfercher/maroto/pkg/pdf"
 	"github.com/johnfercher/maroto/pkg/props"
 	"github.com/juju/errors"
-	"github.com/rstorr/wham-platform/db"
-	"github.com/rstorr/wham-platform/util"
 	uuid "github.com/satori/go.uuid"
+	"github.com/wham-invoice/wham-platform/db"
+	"github.com/wham-invoice/wham-platform/util"
 )
 
 type Builder struct {

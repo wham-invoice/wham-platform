@@ -6,7 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/juju/errors"
-	"github.com/rstorr/wham-platform/server/route"
+	"github.com/wham-invoice/wham-platform/server/route"
 )
 
 // PDF returns the invoice pdf file by id

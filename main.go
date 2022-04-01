@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/rstorr/wham-platform/server"
-	"github.com/rstorr/wham-platform/util"
+	"github.com/wham-invoice/wham-platform/server"
+	"github.com/wham-invoice/wham-platform/util"
 
 	"github.com/juju/errors"
 )

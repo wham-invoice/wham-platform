@@ -11,9 +11,9 @@ import (
 
 	"github.com/gin-contrib/sessions/redis"
 	"github.com/gin-gonic/gin"
-	"github.com/rstorr/wham-platform/db"
-	"github.com/rstorr/wham-platform/server/handler"
-	"github.com/rstorr/wham-platform/tests/setup"
+	"github.com/wham-invoice/wham-platform/db"
+	"github.com/wham-invoice/wham-platform/server/handler"
+	"github.com/wham-invoice/wham-platform/tests/setup"
 
 	"github.com/juju/errors"
 	jc "github.com/juju/testing/checkers"

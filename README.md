@@ -11,14 +11,23 @@ and sends emails to clients.
 
 Start the redis server
 
-`redis-server`
+ - `redis-server`
 
 Start the platform
 
-`go run main.go`
+- `go run main.go`
 
 # Tests
 
 `go test ./...`
 
 # Roadmap
+
+### Packaged into container, deployed to Kubernetes cluster hosted on AWS
+- Use Terraform to create the infrastructure
+  
+### Confirm invoices are paid by polling users bank account
+- Open banking API: https://www.akahu.nz
+
+### Handle payments in cryptocurrencies
+- Look to Solana Pay

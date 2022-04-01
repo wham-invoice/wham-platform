@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/rstorr/wham-platform/db"
-	"github.com/rstorr/wham-platform/util"
+	"github.com/wham-invoice/wham-platform/db"
+	"github.com/wham-invoice/wham-platform/util"
 
 	jc "github.com/juju/testing/checkers"
 	"golang.org/x/oauth2"

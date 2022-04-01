@@ -1,4 +1,4 @@
-module github.com/rstorr/wham-platform
+module github.com/wham-invoice/wham-platform
 
 go 1.17
 

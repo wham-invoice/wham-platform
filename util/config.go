@@ -9,7 +9,7 @@ import (
 func init() {
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
-	viper.AddConfigPath("/Users/work/go/src/github.com/rstorr/wham-platform/secrets")
+	viper.AddConfigPath("/Users/work/go/src/github.com/wham-invoice/wham-platform/secrets")
 	err := viper.ReadInConfig()
 	if err != nil {
 		log.Fatalf("Fatal error config file: %v", err)

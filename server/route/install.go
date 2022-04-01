@@ -5,7 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/juju/errors"
-	"github.com/rstorr/wham-platform/util"
+	"github.com/wham-invoice/wham-platform/util"
 )
 
 // Installer configures a gin.RouterGroup.
