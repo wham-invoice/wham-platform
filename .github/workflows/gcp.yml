@@ -10,7 +10,7 @@ jobs:
     env:
       REPOSITORY: platform
       GKE_CLUSTER: cluster-1
-      GKE_ZONE: us-central1-c 
+      GKE_ZONE: us-central1
 
     steps:
     - name: Checkout
