@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: wham-platform-container
-        image: # TODO set this 
+        image: REGISTRY/PROJECT_ID/REPO/IMAGE
         resources:
           limits:
             memory: 128Mi
