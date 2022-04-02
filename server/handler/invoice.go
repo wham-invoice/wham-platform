@@ -187,7 +187,7 @@ func emailInvoice(
 	user *db.User,
 	contact *db.Contact,
 ) error {
-	b, err := ioutil.ReadFile("/Users/work/go/src/github.com/wham-invoice/wham-platform/secrets/google_web_client_credentials.json")
+	b, err := ioutil.ReadFile("./secrets/google_web_client_credentials.json")
 	if err != nil {
 		return errors.Trace(err)
 	}

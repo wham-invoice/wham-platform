@@ -22,7 +22,7 @@ func Init(ctx context.Context) (*App, error) {
 	config := &firebase.Config{
 		StorageBucket: "wham-ad61b.appspot.com",
 	}
-	opt := option.WithCredentialsFile("/Users/work/go/src/github.com/wham-invoice/wham-platform/secrets/firebase_service_account_key.json")
+	opt := option.WithCredentialsFile("./secrets/firebase_service_account_key.json")
 	firebaseApp, err := firebase.NewApp(context.Background(), config, opt)
 	if err != nil {
 		return nil, errors.Trace(err)
