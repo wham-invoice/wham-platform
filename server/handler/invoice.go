@@ -180,7 +180,7 @@ var EmailInvoice = route.Endpoint{
 	},
 }
 
-// TODO config should be stored in config file.
+// TODO config should be stored in config file. e.g url
 func emailInvoice(
 	ctx context.Context,
 	invoice *db.Invoice,
