@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       REPOSITORY: platform
-      GKE_CLUSTER: cluster-1
+      GKE_CLUSTER: cluster-one
       GKE_ZONE: us-central1
 
     steps:
