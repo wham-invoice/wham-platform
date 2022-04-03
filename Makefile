@@ -9,7 +9,7 @@ build-push-image:
 	docker push $(REGISTRY)/$(PROJECT_ID)/$(REPOSITORY)/$(TAG)
 
 deploy-image:
-  kustomize edit set image gcr.io/PROJECT_ID/REPO/IMAGE=$(REGISTRY)/$(PROJECT_ID)/$(REPOSITORY)/$(TAG)
-  kustomize build . | kubectl apply -f -
-  kubectl rollout status deployment/$DEPLOYMENT_NAME
-  kubectl get services -o wide
+	kustomize edit set image REGISTRY/PROJECT_ID/REPO/IMAGE=$(REGISTRY)/$(PROJECT_ID)/$(REPOSITORY)/$(TAG)
+	kustomize build . | kubectl apply -f -
+	kubectl rollout status deployment/$DEPLOYMENT_NAME
+	kubectl get services -o wide
