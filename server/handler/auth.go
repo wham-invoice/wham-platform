@@ -110,11 +110,21 @@ func getUser(ctx context.Context, app *db.App, req AuthRequest) (*db.User, error
 func tokenFromGoogle(serverAuthCode string) (oauth2.Token, error) {
 	var token oauth2.Token
 
+	id, err := util.GetEnvVar(util.GCP_CLIENT_ID)
+	if err != nil {
+		return token, errors.Trace(err)
+	}
+
+	secret, err := util.GetEnvVar(util.GCP_CLIENT_SECRET)
+	if err != nil {
+		return token, errors.Trace(err)
+	}
+
 	v := url.Values{
 		"Content-Type":  {"application/x-www-form-urlencoded; charset=utf-8"},
 		"code":          {serverAuthCode},
-		"client_id":     {util.GetConfigValue("oauth2.client_id")},
-		"client_secret": {util.GetConfigValue("oauth2.client_secret")},
+		"client_id":     {id},
+		"client_secret": {secret},
 		"redirect_uri":  {"https://wham-ad61b.firebaseapp.com/__/auth/handler"},
 		"grant_type":    {"authorization_code"},
 	}

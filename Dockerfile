@@ -4,22 +4,20 @@
 # build stage
 FROM golang:1.18-alpine as build
 
-COPY . /platform
-WORKDIR /platform
+COPY . /wham-platform
+WORKDIR /wham-platform
 
 RUN go mod download
 
-RUN go build -o /platform -buildvcs=false
+RUN go build -o /wham-platform-bin -buildvcs=false
 
 # deploy stage
-FROM gcr.io/distroless/base-debian10
+FROM golang:1.18-alpine
 
 WORKDIR /
 
-COPY --from=build /platform /platform
+COPY --from=build /wham-platform-bin /wham-platform-bin
 
 EXPOSE 8080
 
-USER nonroot:nonroot
-
-ENTRYPOINT ["/platform"]
+ENTRYPOINT ["/wham-platform-bin"]

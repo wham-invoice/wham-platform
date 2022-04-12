@@ -19,5 +19,16 @@ spec:
           limits:
             memory: 128Mi
             cpu: 100m
+        env:
+          - name: GCP_CLIENT_ID
+            valueFrom:
+              secretKeyRef:
+                name: gcp-secret
+                key: client_id
+          - name: GCP_CLIENT_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: gcp-secret
+                key: client_secret
         ports:
         - containerPort: 8080
