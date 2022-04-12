@@ -32,3 +32,17 @@ spec:
                 key: client_secret
         ports:
         - containerPort: 8080
+        volumeMounts:
+        - name: firebase-account-volume
+          mountPath: "/opt/firebase-service-account-key.json"
+          readOnly: true
+        - name: google-account-volume
+          mountPath: "/opt/google-web-client-credentials.json"
+          readOnly: true
+volumes:
+- name: firebase-account-volume
+  secret:
+    secretName: firebase-service-account-key
+- name: google-account-volume
+  secret:
+    secretName: google-web-client-credentials

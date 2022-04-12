@@ -154,8 +154,12 @@ func tokenFromGoogle(serverAuthCode string) (oauth2.Token, error) {
 func unpackIdToken(ctx context.Context, token string) (db.UserInfo, error) {
 	var info db.UserInfo
 
-	payload, err := idtoken.Validate(ctx, token,
-		util.GetConfigValue("oauth2.client_id"))
+	gcpClientID, err := util.GetEnvVar(util.GCP_CLIENT_ID)
+	if err != nil {
+		return info, errors.Trace(err)
+	}
+
+	payload, err := idtoken.Validate(ctx, token, gcpClientID)
 	if err != nil {
 		return info, errors.Trace(err)
 	}
