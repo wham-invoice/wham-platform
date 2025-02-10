@@ -1,7 +1,3 @@
-// Package handler implements the external codelingo API.
-//
-// It also implements the internal admin API, which probably ought to be a
-// separate service entirely, and not exposed to the outside world.
 package handler
 
 import (
